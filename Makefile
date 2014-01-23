@@ -9,19 +9,19 @@ LIB_DIR		= ./lib
 
 # Build Objects
 SRCS			= $(wildcard $(SRC_DIR)/*.cpp)
-INCLUDES	= -I./include -I/usr/include/eigen3 -I./gtest/include -I/usr/include/assimp
+INCLUDES	= -I./include -I/usr/include/opencv2
 OBJS 			= $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 # Compiler
 CXX				= g++
 CPPFLAGS	= 
-CXXFLAGS	= --std=c++0x -Wextra -Wall $(INCLUDES) $(LIBFLAGS) 
-LIBFLAGS  = 
+CXXFLAGS	= --std=c++0x -D_LINUX -msse3 -Wextra -Wall $(INCLUDES) $(LIBFLAGS) 
+LIBFLAGS  = -L -/usr/local/lib -llapack -lblas -lopencv_core -lopencv_highgui -lopencv_imgproc 
 
 .PHONY: clean all debug
 
 all: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o main
+	$(CXX) $(OBJS) -o main $(CXXFLAGS) 
 
 # Targets
 $(OBJS): $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp
@@ -29,6 +29,7 @@ $(OBJS): $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp
 
 debug: CXXFLAGS:=$(filter-out -O3,$(CXXFLAGS))
 debug: CXXFLAGS += -g 
+debug: all
 
 clean:
 	rm -rf *.o
