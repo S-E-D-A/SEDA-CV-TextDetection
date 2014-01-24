@@ -15,7 +15,8 @@ int main(int argc, char ** argv) {
   namedWindow("Threshold Test", CV_WINDOW_AUTOSIZE);
 
   Mat thresh_im;
-  threshold(src_gray,thresh_im, 127, 255, THRESH_BINARY);
+  // threshold(src_gray,thresh_im, 127, 255, THRESH_BINARY);
+  adaptiveThreshold(src_gray, thresh_im, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 17, 0);
 
   imshow("Threshold Test", thresh_im);
 
