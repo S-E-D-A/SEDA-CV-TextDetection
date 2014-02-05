@@ -8,8 +8,47 @@
 using namespace cv;
 
 int main(int argc, char ** argv) {
+  /* Handles input otpions */
+  /* ##################### */
+  extern char *optarg;
+  int c, err = 0; 
 
-  Mat src = imread(argv[1], 1);
+  // Whether or not -i flag set to value
+  int image_file=0;
+  // Store the -i flag input value
+  char *image_file_name=NULL;
+
+  // Usage string of this program
+  static char usage[] = "Usage: %s -i path/to/image\n";
+
+  while ((c = getopt(argc, argv, "hi:")) != -1)
+    switch (c) {
+    case 'i':
+      image_file = 1;
+      // Store the value of -i flag in variable
+      image_file_name = optarg;
+      break;
+    case 'h':
+      // Show help info and exit
+      fprintf(stderr, usage, argv[0]);
+      exit(1);
+    case '?':
+      // Given incorrect option flag error
+      err = 1;
+      break;
+    }
+  
+  if (image_file == 0) { /* -i  mandatory */
+    fprintf(stderr, "%s: missing -i option\n", argv[0]);
+    fprintf(stderr, usage, argv[0]);
+    exit(1);
+  } else if (err) {
+    fprintf(stderr, usage, argv[0]);
+    exit(1);
+  }
+  /* ##################### */
+
+  Mat src = imread(image_file_name, 1);
   Mat src_gray;
   cvtColor(src, src_gray, CV_RGB2GRAY);
 
@@ -24,7 +63,7 @@ int main(int argc, char ** argv) {
   findContours(thresh_im, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
 
   std::stack<int> dfs_contour;
-  std::vector<int> text_candidate_contours
+  std::vector<int> text_candidate_contours;
 
   // Find first contour in first hierarchy
   for (int i = 0; i < contours.size(); i++) {
@@ -63,8 +102,6 @@ int main(int argc, char ** argv) {
 
   }
 
-  
-  imshow("Threshold Test", thresh_im);
 
   while(true)
   {
