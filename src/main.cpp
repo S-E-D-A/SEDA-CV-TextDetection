@@ -84,12 +84,12 @@ int main(int argc, char ** argv) {
     drawContours(cont_im, contours, curr_contour, Scalar(255,255,255), CV_FILLED, 8);
     imshow("Threshold Test", cont_im);
 
-    if (hierarchy[curr_contour][2] != -1) {
-      dfs_contour.push(hierarchy[curr_contour][2]);
-    }
-
     if (hierarchy[curr_contour][0] != -1) {
       dfs_contour.push(hierarchy[curr_contour][0]);
+    }
+
+    if (hierarchy[curr_contour][2] != -1) {
+      dfs_contour.push(hierarchy[curr_contour][2]);
     }
 
     // Wait for escape keypress
@@ -102,13 +102,4 @@ int main(int argc, char ** argv) {
 
   }
 
-
-  while(true)
-  {
-    int c;
-    c = waitKey( 20 );
-    if( (char)c == 27 )
-      { break; }
-   }
-  return 0;
 }
