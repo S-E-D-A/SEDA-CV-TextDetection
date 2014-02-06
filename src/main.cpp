@@ -8,6 +8,8 @@
 
 using namespace cv;
 
+double border_energy(vector<Point> & points, Mat & sobel_image);
+
 int main(int argc, char ** argv) {
   /* Handles input otpions */
   /* ##################### */
@@ -63,6 +65,16 @@ int main(int argc, char ** argv) {
   vector<Vec4i> hierarchy;
   findContours(thresh_im, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
 
+  // Generate Sobel Gradient Image
+  Mat grad_x, grad_y, abs_grad_x, abs_grad_y;
+  Sobel(src_gray, grad_x, CV_32F, 1, 0, 3, 1, 0, BORDER_DEFAULT);
+  Sobel(src_gray, grad_y, CV_32F, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+
+  // Grad 
+  Mat sobel_magnitude;
+  Mat sobel_angle;
+  cartToPolar(grad_x,grad_y,sobel_magnitude,sobel_angle);
+
   std::stack<int> dfs_contour;
   std::set<int> text_candidate_contours;
 
@@ -82,12 +94,6 @@ int main(int argc, char ** argv) {
     int curr_contour = dfs_contour.top();
     dfs_contour.pop();
 
-    // Show it
-/*
-    Mat cont_im = Mat::zeros(src.rows, src.cols, CV_8UC3);
-    drawContours(cont_im, contours, curr_contour, Scalar(255,255,255), CV_FILLED, 8);
-    imshow("Threshold Test", cont_im);
-*/
 
     /*
     *  Region filtering
@@ -100,8 +106,22 @@ int main(int argc, char ** argv) {
       std::cout << "rejecting region: too large" << std::endl;
     } else if (contour_bb.size().area() < 100) {
       std::cout << "rejecting region: too small" << std::endl;
+    } else if (border_energy(contours[curr_contour], sobel_magnitude) < 200.0) {
+      std::cout << "rejecting region: border energy too low" << std::endl;
     } else {
 
+    // Show it
+/*
+    Mat cont_im = Mat::zeros(src.rows, src.cols, CV_8UC3);
+    drawContours(cont_im, contours, curr_contour, Scalar(255,255,255), CV_FILLED, 8);
+    imshow("Threshold Test", cont_im);
+    while (true) {
+      int c;
+      c = waitKey(20);
+      if( (char)c == 27 )
+        { break; }
+    } 
+*/
       // Add to candidates
       text_candidate_contours.insert(curr_contour);
 
@@ -124,21 +144,34 @@ int main(int argc, char ** argv) {
       dfs_contour.push(hierarchy[curr_contour][2]);
     }
 
-
   }
 
+  Mat cont_im = Mat::zeros(src.rows, src.cols, CV_8UC3);
   for (auto it = text_candidate_contours.begin(); it != text_candidate_contours.end(); ++it) {
     // Show it
-    Mat cont_im = Mat::zeros(src.rows, src.cols, CV_8UC3);
     drawContours(cont_im, contours, *it, Scalar(255,255,255), CV_FILLED, 8);
-    imshow("Threshold Test", cont_im);
-    // Wait for escape keypress
-    while (true) {
-      int c;
-      c = waitKey(20);
-      if( (char)c == 27 )
-        { break; }
-    } 
-
   }
+  imshow("Threshold Test", cont_im);
+  // Wait for escape keypress
+  while (true) {
+    int c;
+    c = waitKey(20);
+    if( (char)c == 27 )
+      { break; }
+  } 
+}
+
+
+double border_energy(vector<Point> & points, Mat & sobel_image) {
+
+  double border_energy = 0.0;
+  for (auto itr = points.begin(); itr != points.end(); ++itr) {
+    border_energy += (float)sobel_image.at<float>(*itr);
+  }
+
+  border_energy = border_energy / (double)points.size();
+
+  std::cout << "BE: " << border_energy << std::endl;
+
+  return border_energy;
 }
