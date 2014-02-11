@@ -9,6 +9,7 @@
 using namespace cv;
 
 double border_energy(vector<Point> & points, Mat & sobel_image);
+double eigen_texture_measure(Mat im, int l); 
 
 int main(int argc, char ** argv) {
   /* Handles input otpions */
@@ -103,10 +104,10 @@ int main(int argc, char ** argv) {
     Rect contour_bb = boundingRect(contours[curr_contour]);
     std::cout <<  contour_bb.size().area() << std::endl;
     if (contour_bb.size().area() > 0.5*src.rows*src.cols) {
-      std::cout << "rejecting region: too large" << std::endl;
-    } else if (contour_bb.size().area() < 100) {
-      std::cout << "rejecting region: too small" << std::endl;
-    } else if (border_energy(contours[curr_contour], sobel_magnitude) < 200.0) {
+//      std::cout << "rejecting region: too large" << std::endl;
+    } else if (contour_bb.size().area() < 30) {
+//      std::cout << "rejecting region: too small" << std::endl;
+    } else if (border_energy(contours[curr_contour], sobel_magnitude) < 30.0) {
       std::cout << "rejecting region: border energy too low" << std::endl;
     } else {
 
@@ -127,11 +128,13 @@ int main(int argc, char ** argv) {
 
       // Remove parents
       int parent_contour = hierarchy[curr_contour][3];
+      text_candidate_contours.erase(parent_contour);
+/*
       while (parent_contour != -1) {
         text_candidate_contours.erase(parent_contour);
         parent_contour = hierarchy[parent_contour][3];
       }
-      text_candidate_contours.insert(curr_contour);
+*/
     }
 
     // Push neighbor
@@ -151,6 +154,7 @@ int main(int argc, char ** argv) {
     // Show it
     drawContours(cont_im, contours, *it, Scalar(255,255,255), CV_FILLED, 8);
   }
+  cont_im = ~cont_im;
   imshow("Threshold Test", cont_im);
   // Wait for escape keypress
   while (true) {
@@ -174,4 +178,21 @@ double border_energy(vector<Point> & points, Mat & sobel_image) {
   std::cout << "BE: " << border_energy << std::endl;
 
   return border_energy;
+}
+
+// Computes the Eigen-Transform texture operator for the image block im
+// l : number of eigenvalues to disgard
+double eigen_texture_measure(Mat im, int l) {
+    // We only need the singular values
+    std::vector<double> singular_vals; 
+    SVD::compute(im, singular_vals, SVD::NO_UV); 
+
+    int w = singular_vals.size();
+
+    double texture_measure = 0;
+    for (; l < w ; ++l) {
+      texture_measure += singular_vals[l];
+    }
+    texture_measure /= 1 + w - l;
+    return texture_measure;
 }
