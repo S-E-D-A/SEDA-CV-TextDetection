@@ -36,8 +36,7 @@ CvSubdiv2D* construct_planar_graph(Rect* text_region_array){
 	return NULL;
 };
 
-Point2f* calculate_region_center(Rect region){
-	//return Point(region_x_max/2, region_y_max/2)
-	return NULL;
+Point2f* calculate_region_center(Rect text_region){
+	return new Point2f(text_region.width/2, text_region.height/2);
 }
 
