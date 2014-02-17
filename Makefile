@@ -4,24 +4,24 @@ SHELL = /bin/bash
 OBJ_DIR		= ./obj
 SRC_DIR		= ./src
 TEST_DIR	= ./test
-GTEST_DIR   = ./gtest
+GTEST_DIR	= ./gtest
 LIB_DIR		= ./lib
 
 # Build Objects
-SRCS		= $(wildcard $(SRC_DIR)/*.cpp)
-INCLUDES	= -I./include -I/usr/include/opencv2 -I./gtest/include
-OBJS 		= $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+SRCS				= $(wildcard $(SRC_DIR)/*.cpp)
+INCLUDES		= -I./include -I/usr/include/opencv2 -I./gtest/include
+OBJS				= $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 NONMAINOBJS = $(filter-out ./obj/main.o,$(OBJS))
 
-TESTS 		= $(wildcard $(TEST_DIR)/*.cpp)
-TEST_OBJS   = $(TESTS:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+TESTS			= $(wildcard $(TEST_DIR)/*.cpp)
+TEST_OBJS	= $(TESTS:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 # Compiler
 CXX		    = g++
 CPPFLAGS	= -isystem $(GTEST_DIR)/include
-CXXFLAGS    = -Wextra -pthread
+CXXFLAGS	= -Wextra -pthread
 CXXFLAGS	+= --std=c++0x -D_LINUX -msse3 -Wall -O3 $(INCLUDES) $(LIBFLAGS)
-LIBFLAGS    = -L -/usr/local/lib -llapack -lblas -lopencv_core -lopencv_highgui -lopencv_imgproc 
+LIBFLAGS	= -L -/usr/local/lib -llapack -lblas -lopencv_core -lopencv_highgui -lopencv_imgproc 
 
 # Google Test
 GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
@@ -54,22 +54,21 @@ $(OBJ_DIR)/gtest_main.a : ./obj/gtest-all.o ./obj/gtest_main.o
 $(OBJS): $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@ 
 
-$(OBJS): | $(OBJ_DIR)
-
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
-
-debug: CXXFLAGS:=$(filter-out -O3,$(CXXFLAGS))
-debug: CXXFLAGS += -g 
-debug: all
 
 # Google test targets
 $(TEST_OBJS): $(OBJ_DIR)/%.o : $(TEST_DIR)/%.cpp $(GTEST_HEADERS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@ 
 
 test: $(NONMAINOBJS) $(TEST_OBJS) ./obj/gtest_main.a
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -lpthread $^ -o rt_test 
-	./rt_test
+	$(CXX) $^ $(CXXFLAGS) $(CPPFLAGS) -lpthread -o td_test 
+	./td_test
+
+debug: CXXFLAGS:=$(filter-out -O3,$(CXXFLAGS))
+debug: CXXFLAGS += -g 
+debug: all
+
 
 clean:
 	rm -rf *.o
