@@ -19,8 +19,8 @@ TEST_OBJS   = $(TESTS:$(TEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 # Compiler
 CXX		    = g++
 CPPFLAGS	= -isystem $(GTEST_DIR)/include
-CXXFLAGS    = -g -Wextra -pthread
-CXXFLAGS	+= --std=c++0x -D_LINUX -msse3 -Wall $(INCLUDES) $(LIBFLAGS) 
+CXXFLAGS    = -Wextra -pthread
+CXXFLAGS	+= --std=c++0x -D_LINUX -msse3 -Wall -O3 $(INCLUDES) $(LIBFLAGS)
 LIBFLAGS    = -L -/usr/local/lib -llapack -lblas -lopencv_core -lopencv_highgui -lopencv_imgproc 
 
 # Google Test
@@ -30,7 +30,7 @@ GTEST_SRCS_   = $(GTEST_DIR)/src/*.cc \
 								$(GTEST_DIR)/src/*.h \
 								$(GTEST_HEADERS)
 
-.PHONY: clean all debug
+.PHONY: clean all debug test
 
 all: $(OBJS)
 	$(CXX) $(OBJS) -o main $(CXXFLAGS) 
@@ -68,8 +68,7 @@ $(TEST_OBJS): $(OBJ_DIR)/%.o : $(TEST_DIR)/%.cpp $(GTEST_HEADERS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@ 
 
 test: $(NONMAINOBJS) $(TEST_OBJS) ./obj/gtest_main.a
-	echo $(NONMAINOBJS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o rt_test 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -lpthread $^ -o rt_test 
 	./rt_test
 
 clean:
