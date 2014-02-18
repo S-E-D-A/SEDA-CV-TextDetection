@@ -1,9 +1,13 @@
-#include "perceptual_text_grouping.h"
+#include "../include/perceptual_text_grouping.h"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/core/types_c.h>
+#include <stddef.h>
+#include <cstdlib>
 
 namespace perceptual_text_grouping{
 
-  Mat* perceptual_text_grouping(Mat* image, vector<Rect4f*> text_region_array){
-    // construct_planar_graph
+  Mat* perceptual_text_grouping(Mat& image, vector<Rect4f*>& text_region_array){
     // for edge e in graph
     //   if !text_saliency_operator remove edge
     // return connected nodes as text regions
@@ -29,18 +33,16 @@ namespace perceptual_text_grouping{
     return 0;
   };
 
-  Subdiv2D* construct_planar_graph(vector<Rect4f*> text_region_array, 
-    Rect image_size){
+  Subdiv2D* construct_planar_graph(vector<Rect4f*> &text_region_array, 
+    Rect *image_size){
 
     // Initialize graph with image size the maximum bounding box
-    Subdiv2D* planar_graph = new Subdiv2D(image_size);
-
-    MemStorage storage(cvCreateMemStorage(0));
+    Subdiv2D* planar_graph = new Subdiv2D(*image_size);
 
     // Insert each text region center into the graph
     for(unsigned int i = 0; i < text_region_array.size(); i++){
-     Point2f* tmp_point = rect_center_point(text_region_array[i]);
-     planar_graph->insert(*tmp_point);
+     Point2f* center_point = rect_center_point(text_region_array[i]);
+     planar_graph->insert(*center_point);
     }
 
     return planar_graph;
@@ -48,7 +50,8 @@ namespace perceptual_text_grouping{
 
   Point2f* rect_center_point(Rect4f* text_region){
     // returns the center of a Rect4f as a Point2f
-    return new Point2f(text_region->width/2, text_region->height/2);
+    return new Point2f(text_region->x + text_region->width/2,
+    				   text_region->y + text_region->height/2);
   };
 }
 

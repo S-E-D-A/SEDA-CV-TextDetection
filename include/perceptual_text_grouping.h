@@ -15,7 +15,7 @@ namespace perceptual_text_grouping {
      segmentation step and makes compact groups of perceptually 
      close or salient regions
   */
-  Mat* perceptual_text_grouping(Mat* image, vector<Rect4f*> text_region_array);
+  Mat* perceptual_text_grouping(Mat& image, vector<Rect4f*>& text_region_array);
 
   // Text saliency operator
   bool text_saliency_operator(Rect4f* A, Rect4f* B);
@@ -25,8 +25,8 @@ namespace perceptual_text_grouping {
   double blob_dimension_ratio(Rect4f* A, Rect4f* B);
 
   // Creation of planar graph using Delaunay triangulation
-  Subdiv2D* construct_planar_graph(vector<Rect4f*> text_region_array, 
-                            Rect image_size);
+  Subdiv2D* construct_planar_graph(vector<Rect4f*> &text_region_array, 
+                            Rect* image_size);
   Point2f* rect_center_point(Rect4f* text_region);
 }
 
