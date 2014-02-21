@@ -59,10 +59,10 @@ $(OBJ_DIR):
 
 # Google test targets
 $(TEST_OBJS): $(OBJ_DIR)/%.o : $(TEST_DIR)/%.cpp $(GTEST_HEADERS)
-	$(CXX) $(CXXFLAGS) -c $< -o $@ 
+	$(CXX) $(CXXFLAGS) -g -c $< -o $@ 
 
 test: $(NONMAINOBJS) $(TEST_OBJS) ./obj/gtest_main.a
-	$(CXX) $^ $(CXXFLAGS) $(CPPFLAGS) -lpthread -o td_test 
+	$(CXX) $^ $(CXXFLAGS) $(CPPFLAGS) -g -lpthread -o td_test 
 	./td_test
 
 debug: CXXFLAGS:=$(filter-out -O3,$(CXXFLAGS))
