@@ -1,11 +1,9 @@
 #include "perceptual_text_grouping.h"
 #include "gtest/gtest.h"
 
-typedef Rect_<float> Rect4f;
-
 TEST(Perceptual_text_grouping_test, rect_center_point_function) {
-	float x = 7.f, y = 3.f, width = 19.f, height = 5.f;
-    Rect_<float>* text_region = new Rect4f(x, y, width, height);
+	int x = 7, y = 3, width = 19, height = 5;
+    Rect* text_region = new Rect(x, y, width, height);
     Point2f* calculated_point = perceptual_text_grouping::rect_center_point(text_region);
     Point2f* center_point = new Point2f(x+width/2, y+height/2);
 
@@ -18,7 +16,7 @@ TEST(Perceptual_text_grouping_test, rect_center_point_function) {
 }
 
 TEST(Perceptual_text_grouping_test, construct_planar_graph_function) {
-  vector<Rect4f*> text_region_array;
+  vector<Rect*> text_region_array;
   Rect* image_size = new Rect(0,0,600,600);
   
   perceptual_text_grouping::construct_planar_graph(text_region_array, 
@@ -30,7 +28,7 @@ TEST(Perceptual_text_grouping_test, construct_planar_graph_function) {
 TEST(Perceptual_text_grouping_test, perceptual_text_grouping_random_regions){
 	Mat image = imread("test.png", 1);
 
-	vector<Rect4f*> text_region_array;
+	vector<Rect*> text_region_array;
 
 	// Get the size of the image and create a Rect from it
 	Size image_size = image.size();
@@ -47,7 +45,7 @@ TEST(Perceptual_text_grouping_test, perceptual_text_grouping_random_regions){
 	  int bounding_box_x = rand()%remainder_width;
 	  int bounding_box_y = rand()%remainder_height;
 
-	  Rect4f* r1 = new Rect4f(x, y, bounding_box_x, bounding_box_y);
+	  Rect* r1 = new Rect(x, y, bounding_box_x, bounding_box_y);
 	  text_region_array.push_back(r1);
 	}
 
@@ -68,27 +66,27 @@ TEST(Perceptual_text_grouping_test, perceptual_text_grouping_random_regions){
 TEST(Perceptual_text_grouping_test, perceptual_text_grouping_function) {
 	Mat image = imread("test.png", 1);
 
-	vector<Rect4f*> text_region_array;
+	vector<Rect*> text_region_array;
 
-	Rect4f* r1 = new Rect4f(202, 52, 44, 70);
+	Rect* r1 = new Rect(202, 52, 44, 70);
 	text_region_array.push_back(r1);
-	r1 = new Rect4f(280, 52, 44, 70);
+	r1 = new Rect(280, 52, 44, 70);
 	text_region_array.push_back(r1);
-	r1 = new Rect4f(354, 52, 44, 70);
-	text_region_array.push_back(r1);
-
-	r1 = new Rect4f(244, 391, 79, 97);
-	text_region_array.push_back(r1);
-	r1 = new Rect4f(384, 391, 16, 100);
-	text_region_array.push_back(r1);
-	r1 = new Rect4f(455, 391, 58, 102);
+	r1 = new Rect(354, 52, 44, 70);
 	text_region_array.push_back(r1);
 
-	r1 = new Rect4f(247, 226, 54, 68);
+	r1 = new Rect(244, 391, 79, 97);
 	text_region_array.push_back(r1);
-	r1 = new Rect4f(331, 226, 48, 68);
+	r1 = new Rect(384, 391, 16, 100);
 	text_region_array.push_back(r1);
-	r1 = new Rect4f(411, 226, 63, 68);
+	r1 = new Rect(455, 391, 58, 102);
+	text_region_array.push_back(r1);
+
+	r1 = new Rect(247, 226, 54, 68);
+	text_region_array.push_back(r1);
+	r1 = new Rect(331, 226, 48, 68);
+	text_region_array.push_back(r1);
+	r1 = new Rect(411, 226, 63, 68);
 	text_region_array.push_back(r1);
 
 	perceptual_text_grouping::perceptual_text_grouping(image, text_region_array);
