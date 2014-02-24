@@ -9,6 +9,11 @@
 #include <map>
 #include <stdexcept>
 #include <utility>
+#include <set>
+#include <algorithm>
+
+// Whether or not to build delaunay triangulation line by line
+const bool LINE_BY_LINE_MODE = false;
 
 const float N_CONST = 1/sqrt(2*M_PI);
 const float SALIENT_THRESHOLD = 0.01f;
@@ -18,56 +23,85 @@ const float RELATIVE_MIN_SD = 2;
 const float BLOB_DIM_AVG = 0;
 const float BLOB_DIM_SD = 4;
 
+typedef std::map<int, Rect*> RectMap;
+typedef std::set<Rect*> RectPtrSet;
+
 namespace perceptual_text_grouping{
 
-  void perceptual_text_grouping(Mat& image, vector<Rect4f*>& text_region_array){
+  vector<Rect*> perceptual_text_grouping(Mat& image, vector<Rect*>& text_region_array){
 	// Color to draw  lines
-	Scalar delaunay_color(255,255,0);
+ 	Scalar delaunay_color(255,255,0);
 	Scalar bad_color(0,0,255);
 
 	// Map of text regions pointers
-	std::map<int, Rect4f*> text_region_map;
+	RectMap text_region_map;
 
 	// Go through the text regions and store them in a map
 	for(size_t i = 0; i < text_region_array.size(); i++){
 		// Get the center point of the region
 		Point2f* center_pt = rect_center_point(text_region_array[i]);
 		// x^2+y^2 of the center as unique key for each region
-		int xy_sqr = pow(center_pt->x, 2) + pow(center_pt->y,2);
-		printf("xy_sqr %i\n", xy_sqr);
+		int xy_sqr = pow(cvRound(center_pt->x), 2) + pow(cvRound(center_pt->y),2);
 		text_region_map.insert(std::make_pair(xy_sqr, text_region_array[i]));
 	}
 
 	// Get the size of the image and create a Rect from it
     Size image_size = image.size();
-    Rect* image_size_rect = new Rect(0, 0, image_size.width, image_size.height);
+    Rect image_size_rect(0, 0, image_size.width, image_size.height);
     
     // Construct a planar graph and maintain a pointer to it
-    Subdiv2D* planarGraph = construct_planar_graph(text_region_array, image_size_rect);
+    Subdiv2D* planarGraph = construct_planar_graph(text_region_array, &image_size_rect);
 
     // Get a vector of edges
     vector<Vec4f> edgeList;
     planarGraph->getEdgeList(edgeList);
 
+    vector<Vec4f> realEdgeList;
+
+    // Remove non valid regions created during delaunay construction
+    // For each valid region edge, calculate saliency
+	for(size_t i = 0; i < edgeList.size(); i++){
+	  Vec4f e = edgeList[i];
+	  try {
+		  // Obtain both regions, if the region is not in the map
+		  // an error is thrown and the points are skipped
+		  int xy_sqr_1 = pow(cvRound(e[0]),2) + pow(cvRound(e[1]),2);
+		  text_region_map.at(xy_sqr_1);
+
+		  int xy_sqr_2 = pow(cvRound(e[2]),2) + pow(cvRound(e[3]),2);
+		  text_region_map.at(xy_sqr_2);
+
+		  // Real edge
+		  realEdgeList.push_back(e);
+	  } catch (const std::out_of_range& oor) {
+		  // This is thrown and ignored if an out of bounds
+		  // rect from the Delaunay calculations is used
+	  }
+	}
+
     // Draw initial image
     imshow("Threshold Test", image);
 
-    printf("Tap SPACE to iteratively draw lines.\n\n");
+    if(LINE_BY_LINE_MODE){
+        printf("Tap SPACE to iteratively draw lines.\n\n");
+    }
+
+    vector<Vec4f> salientEdgeList;
 
     // For each valid region edge, calculate saliency
-    for(size_t i = 0; i < edgeList.size(); i++){
-      Vec4f e = edgeList[i];
-      try {
-    	  // Obtain both regions, if the region is not in the map
-    	  // an error is thrown and the points are skipped
-    	  int xy_sqr_1 = pow(e[0],2) + pow(e[1],2);
-    	  printf("xy_sqr_1 %i\n", xy_sqr_1);
-    	  Rect4f* A = text_region_map.at(xy_sqr_1);
-    	  int xy_sqr_2 = pow(e[2],2) + pow(e[3],2);
-    	  printf("xy_sqr_2 %i\n", xy_sqr_2);
-    	  Rect4f* B = text_region_map.at(xy_sqr_2);
+    for(size_t i = 0; i < realEdgeList.size(); i++){
+      Vec4f e = realEdgeList[i];
 
-    	  if(text_saliency_operator(A,B)){
+      // Obtain both regions, if the region is not in the map
+	  // an error is thrown and the points are skipped
+	  int xy_sqr_1 = pow(cvRound(e[0]),2) + pow(cvRound(e[1]),2);
+	  Rect* A = text_region_map.at(xy_sqr_1);
+
+	  int xy_sqr_2 = pow(cvRound(e[2]),2) + pow(cvRound(e[3]),2);
+	  Rect* B = text_region_map.at(xy_sqr_2);
+
+	  if(text_saliency_operator(A,B)){
+		  if(LINE_BY_LINE_MODE){
 			  // Wait for keypress
 			  while (true) {
 				   int c = waitKey(120);
@@ -79,32 +113,123 @@ namespace perceptual_text_grouping{
 					   exit(1);
 				   }
 			  }
+		  }
 
-			  Point pt0 = Point(cvRound(e[0]), cvRound(e[1]));
-			  Point pt1 = Point(cvRound(e[2]), cvRound(e[3]));
+		  Point pt0 = Point(cvRound(e[0]), cvRound(e[1]));
+		  Point pt1 = Point(cvRound(e[2]), cvRound(e[3]));
 
-			  line(image, pt0, pt1, delaunay_color, 1, 16, 0);
-			  rectangle(image, *A, delaunay_color, 1, 16, 0);
-			  rectangle(image, *B, delaunay_color, 1, 16, 0);
+		  salientEdgeList.push_back(e);
 
-			  imshow("Threshold Test", image);
-    	  }
-      } catch (const std::out_of_range& oor) {
-    	  // This is thrown and ignored if an out of bounds
-      	  // rect from the Delaunay calculations is used
-      }
+		  line(image, pt0, pt1, delaunay_color, 1, 16, 0);
+		  rectangle(image, *A, delaunay_color, 1, 16, 0);
+		  rectangle(image, *B, delaunay_color, 1, 16, 0);
+
+		  imshow("Threshold Test", image);
+	  }
     }
 
-    // Delete current region pointers
-    for(size_t i = 0; i < text_region_array.size(); i++){
-    	delete text_region_array[i];
+    // The vector of all sets of connected rects
+    std::vector<RectPtrSet*> edge_groups;
+
+    // Store all connected Rects as groups inside of sets
+    for(size_t i = 0; i < salientEdgeList.size(); i++){
+    	Vec4f e = salientEdgeList[i];
+
+    	int xy_sqr_1 = pow(cvRound(e[0]),2) + pow(cvRound(e[1]),2);
+    	Rect* A = text_region_map.at(xy_sqr_1);
+
+    	int xy_sqr_2 = pow(cvRound(e[2]),2) + pow(cvRound(e[3]),2);
+    	Rect* B = text_region_map.at(xy_sqr_2);
+
+    	bool found = false;
+
+    	// Counter of groups which contain the same rects
+    	vector<int> region_counter;
+
+    	for(size_t j = 0; j < edge_groups.size(); j++){
+    		if(std::find(edge_groups[j]->begin(), edge_groups[j]->end(), A) != edge_groups[j]->end() ||
+    		   std::find(edge_groups[j]->begin(), edge_groups[j]->end(), B) != edge_groups[j]->end()) {
+    			found = true;
+    			edge_groups[j]->insert(A);
+    			edge_groups[j]->insert(B);
+    			region_counter.push_back(j);
+    		}
+    	}
+
+    	if(!found){
+    		std::set<Rect*>* insert_set = new std::set<Rect*>();
+    		insert_set->insert(A);
+    		insert_set->insert(B);
+    		edge_groups.push_back(insert_set);
+    	} else if(region_counter.size() > 1){
+    		// If there were matches in more than one group
+    		// it means two existing groups are connected and need to be merged
+    		RectPtrSet* merged_set;
+    		std::vector<RectPtrSet*> sets_to_delete;
+
+    		//
+    		for(size_t i = 0; i < region_counter.size(); i++){
+    			int region_index = region_counter[i];
+
+    			sets_to_delete.push_back(edge_groups[region_index]);
+
+    			RectPtrSet* edge_set_ptr = edge_groups[region_index];
+    			RectPtrSet mergeInSet = *edge_set_ptr;
+
+    			for(RectPtrSet::iterator it = mergeInSet.begin(); it!=mergeInSet.end(); ++it){
+    				merged_set->insert(*it);
+    			}
+    		}
+
+    		for(size_t i = 0; i < sets_to_delete.size(); i++){
+    			std::vector<RectPtrSet*>::iterator delete_it = std::find(edge_groups.begin(), edge_groups.end(), sets_to_delete[i]);
+    			edge_groups.erase(delete_it);
+    		}
+    		edge_groups.push_back(merged_set);
+    	}
     }
-    // traverse planar graph for all > 1 connected rects
-    //   find max and min x,y of connected Rects
-    //   store the containing Rect region in textRegions vector
+
+    vector<Rect*> final_text_region_rects;
+
+	// Get the enclosing rects for the text regions
+    for(size_t i = 0; i < edge_groups.size(); i++){
+    	vector<int> widths;
+    	vector<int> heights;
+
+    	for(std::set<Rect*>::iterator it=edge_groups[i]->begin(); it!=edge_groups[i]->end(); ++it){
+    		widths.push_back((*it)->x);
+    		widths.push_back((*it)->x+(*it)->width);
+    		heights.push_back((*it)->y);
+    		heights.push_back((*it)->y+(*it)->height);
+    	}
+
+    	std::sort(widths.begin(), widths.end());
+    	std::sort(heights.begin(), heights.end());
+
+    	int min_x = *(widths.begin());
+    	int min_y = *(heights.begin());
+
+    	int width = *(widths.end() -1 ) - min_x;
+    	int height = *(heights.end() -1) - min_y;
+
+    	Rect* max_container_rect = new Rect(min_x, min_y, width, height);
+    	final_text_region_rects.push_back(max_container_rect);
+
+    	rectangle(image, *max_container_rect, bad_color, 1, 16, 0);
+    }
+
+    for(size_t j = 0; j < edge_groups.size(); j++){
+    	delete edge_groups[j];
+    	edge_groups[j] = NULL;
+    }
+
+    delete planarGraph;
+    planarGraph = NULL;
+
+    return final_text_region_rects;
   };
 
-  bool text_saliency_operator(Rect4f* A, Rect4f* B){
+  bool text_saliency_operator(Rect* A, Rect* B){
 	float rmd = relative_minimum_distance(A,B);
 	float bdr = blob_dimension_ratio(A,B);
 
@@ -114,36 +239,19 @@ namespace perceptual_text_grouping{
 	float bdr_n = normal_distribution(bdr,
 			BLOB_DIM_AVG,BLOB_DIM_SD);
 
-
-	float f1 = rmd_n*bdr_n;
-	float f2 = SALIENT_THRESHOLD;
-
-	bool ret = f1 > f2;
-
-	if(ret){
-		printf("\nSALIENT REGION\n");
-		printf("Relative minimum distance: %f\n", rmd);
-		printf("Blob dimension ratio: %f\n", bdr);
-		printf("Saliency score: %e\n", f1);
-	} else {
-		printf("\nNONSALIENT REGION\n");
-		printf("Relative minimum distance: %f\n", rmd);
-		printf("Blob dimension ratio: %f\n", bdr);
-		printf("Saliency score: %e\n\n", f1);
-	}
- 	return ret;
+ 	return (rmd_n*bdr_n) > SALIENT_THRESHOLD;
   };
 
   // Takes two candidate text regions A and B as inputs
-  float relative_minimum_distance(Rect4f* A, Rect4f* B){
+  float relative_minimum_distance(Rect* A, Rect* B){
     return min_distance(A,B)/(axis(A,minAxis) + axis(B,minAxis));
   };
 
-  float blob_dimension_ratio(Rect4f* A, Rect4f* B){
+  float blob_dimension_ratio(Rect* A, Rect* B){
 	return (axis(A,minAxis)+axis(A,maxAxis))/(axis(B,minAxis)+axis(B,maxAxis));
   };
 
-  Subdiv2D* construct_planar_graph(vector<Rect4f*> &text_region_array,
+  Subdiv2D* construct_planar_graph(vector<Rect*> &text_region_array,
 	Rect *image_size){
 
 	// Initialize graph with image size the maximum bounding box
@@ -158,17 +266,17 @@ namespace perceptual_text_grouping{
 	return planar_graph;
   };
 
-	Point2f* rect_center_point(Rect4f* text_region){
-	  // returns the center of a Rect4f as a Point2f
-	  return new Point2f(text_region->x + text_region->width/2,
-					   text_region->y + text_region->height/2);
+	Point2f* rect_center_point(Rect* text_region){
+	  // returns the center of a Rect as a Point
+	  return new Point2f(cvRound((text_region->x + text_region->width/2)),
+			  cvRound((text_region->y + text_region->height/2)));
 	};
 
   float normal_distribution(float x, float mu, float sigma){
 	  return N_CONST*(1/sigma) * exp(-powf((x-mu),2)/(2*powf(sigma,2)));
   };
 
-  float axis(Rect4f* A, bool (*which_axis)(Rect4f*)){
+  float axis(Rect* A, bool (*which_axis)(Rect*)){
  	  float height_axis = A->height;
  	  float width_axis = A->width;
 
@@ -179,20 +287,20 @@ namespace perceptual_text_grouping{
  	  }
    };
 
-  bool minAxis(Rect4f* A){
+  bool minAxis(Rect* A){
 	  return A->height < A->width;
   };
 
-  bool maxAxis(Rect4f* A){
+  bool maxAxis(Rect* A){
   	  return A->height > A->width;
   };
 
-  float min_distance(Rect4f* A, Rect4f* B){
+  float min_distance(Rect* A, Rect* B){
 
 	  Point2f* A_pt = rect_center_point(A);
 	  Point2f* B_pt = rect_center_point(B);
 
-	  Rect4f intersect = *A&*B;
+	  Rect intersect = *A&*B;
 
 	  // If the rectangles overlap they have 0 distance between them
 	  if(intersect.width > 0 ||
@@ -202,8 +310,8 @@ namespace perceptual_text_grouping{
 		  return 0;
 	  }
 
-	  printf("Min dist: %f\n", sqrtf(powf((A_pt->x - B_pt->x),2) + powf((A_pt->y - B_pt->y),2)));
-	  return sqrtf(powf((A_pt->x - B_pt->x),2) + powf((A_pt->y - B_pt->y),2));
+	  return sqrt(pow((cvRound(A_pt->x) - cvRound(B_pt->x)),2) +
+			  pow((cvRound(A_pt->y) - cvRound(B_pt->y)),2));
   };
 }
 

@@ -8,35 +8,33 @@
 
 using namespace cv;
 
-typedef Rect_<float> Rect4f;
-
 namespace perceptual_text_grouping {
-  /* The text grouping stage takes the regions produced by the text 
+  /* The text grouping stage takes the regions produced by the text
      segmentation step and makes compact groups of perceptually 
      close or salient regions
   */
-  void perceptual_text_grouping(Mat& image, vector<Rect4f*>& text_region_array);
+  vector<Rect*> perceptual_text_grouping(Mat& image, vector<Rect*>& text_region_array);
 
   // Text saliency operator
-  bool text_saliency_operator(Rect4f* A, Rect4f* B);
+  bool text_saliency_operator(Rect* A, Rect* B);
 
   // Scale-invariant saliency measures
-  float relative_minimum_distance(Rect4f* A, Rect4f* B);
-  float blob_dimension_ratio(Rect4f* A, Rect4f* B);
+  float relative_minimum_distance(Rect* A, Rect* B);
+  float blob_dimension_ratio(Rect* A, Rect* B);
 
   // Creation of planar graph using Delaunay triangulation
-  Subdiv2D* construct_planar_graph(vector<Rect4f*> &text_region_array,
+  Subdiv2D* construct_planar_graph(vector<Rect*> &text_region_array,
                             Rect* image_size);
-  Point2f* rect_center_point(Rect4f* text_region);
+  Point2f* rect_center_point(Rect* text_region);
 
   float normal_distribution(float x, float mu, float sigma);
 
   // Expects minAxis or maxAxis as inputs to which_axis
-  float axis(Rect4f* A, bool (*which_axis)(Rect4f*));
-  bool minAxis(Rect4f* A);
-  bool maxAxis(Rect4f* A);
+  float axis(Rect* A, bool (*which_axis)(Rect*));
+  bool minAxis(Rect* A);
+  bool maxAxis(Rect* A);
 
-  float min_distance(Rect4f* A, Rect4f* B);
+  float min_distance(Rect* A, Rect* B);
 }
 
 #endif
