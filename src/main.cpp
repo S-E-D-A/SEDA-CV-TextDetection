@@ -156,8 +156,9 @@ int main(int argc, char ** argv) {
   }
   cont_im = ~cont_im;
   namedWindow("Threshold Test", CV_WINDOW_AUTOSIZE);
-  imshow("Threshold Test", cont_im);
-  perceptual_text_grouping::perceptual_text_grouping(src_gray, text_bbs);
+  
+  perceptual_text_grouping::perceptual_text_grouping(cont_im, text_bbs);
+  
   // Wait for escape keypress
   while (true) {
     int c;

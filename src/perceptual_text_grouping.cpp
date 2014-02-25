@@ -16,7 +16,7 @@
 const bool LINE_BY_LINE_MODE = false;
 
 const float N_CONST = 1/sqrt(2*M_PI);
-const float SALIENT_THRESHOLD = 0.01f;
+const float SALIENT_THRESHOLD = 0.015f;
 
 const float RELATIVE_MIN_AVG = 1;
 const float RELATIVE_MIN_SD = 2;
@@ -225,6 +225,9 @@ namespace perceptual_text_grouping{
 
     delete planarGraph;
     planarGraph = NULL;
+
+    // Draw final region rectangles
+    imshow("Threshold Test", image);
 
     return final_text_region_rects;
   };
