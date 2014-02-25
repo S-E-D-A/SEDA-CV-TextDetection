@@ -6,10 +6,12 @@
 #include <stack>
 #include <set>
 
+#include "perceptual_text_grouping.h"
+
 using namespace cv;
 
 double border_energy(vector<Point> & points, Mat & sobel_image);
-double eigen_texture_measure(Mat im, int l); 
+double eigen_texture_measure(vector<Point> & points, Mat im, int n, int l); 
 
 int main(int argc, char ** argv) {
   /* Handles input otpions */
@@ -56,10 +58,8 @@ int main(int argc, char ** argv) {
   Mat src_gray;
   cvtColor(src, src_gray, CV_RGB2GRAY);
 
-  namedWindow("Threshold Test", CV_WINDOW_AUTOSIZE);
 
   Mat thresh_im;
-  // threshold(src_gray,thresh_im, 127, 255, THRESH_BINARY);
   adaptiveThreshold(src_gray, thresh_im, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 17, 0);
 
   vector<vector<Point> > contours;
@@ -102,39 +102,26 @@ int main(int argc, char ** argv) {
 
     // Size
     Rect contour_bb = boundingRect(contours[curr_contour]);
-    std::cout <<  contour_bb.size().area() << std::endl;
     if (contour_bb.size().area() > 0.5*src.rows*src.cols) {
-//      std::cout << "rejecting region: too large" << std::endl;
-    } else if (contour_bb.size().area() < 30) {
-//      std::cout << "rejecting region: too small" << std::endl;
-    } else if (border_energy(contours[curr_contour], sobel_magnitude) < 30.0) {
-      std::cout << "rejecting region: border energy too low" << std::endl;
+      //std::cout << "rejecting region: too large" << std::endl;
+    } else if (contour_bb.size().area() < 600) {
+      //std::cout << "rejecting region: too small" << std::endl;
+    } else if (border_energy(contours[curr_contour], sobel_magnitude) < 40.0) {
+      //std::cout << "rejecting region: border energy too low" << std::endl;
+    } else if (eigen_texture_measure(contours[curr_contour], src_gray, 8, 8) < 0.5) {
+
     } else {
 
-    // Show it
-/*
-    Mat cont_im = Mat::zeros(src.rows, src.cols, CV_8UC3);
-    drawContours(cont_im, contours, curr_contour, Scalar(255,255,255), CV_FILLED, 8);
-    imshow("Threshold Test", cont_im);
-    while (true) {
-      int c;
-      c = waitKey(20);
-      if( (char)c == 27 )
-        { break; }
-    } 
-*/
       // Add to candidates
       text_candidate_contours.insert(curr_contour);
 
       // Remove parents
       int parent_contour = hierarchy[curr_contour][3];
-      text_candidate_contours.erase(parent_contour);
-/*
       while (parent_contour != -1) {
         text_candidate_contours.erase(parent_contour);
         parent_contour = hierarchy[parent_contour][3];
       }
-*/
+
     }
 
     // Push neighbor
@@ -144,10 +131,23 @@ int main(int argc, char ** argv) {
 
     // Push Children (This gets traversed first, if possible)
     if (hierarchy[curr_contour][2] != -1) {
-      dfs_contour.push(hierarchy[curr_contour][2]);
+      int child_contour = hierarchy[hierarchy[curr_contour][2]][2];
+      if (child_contour != -1)
+        dfs_contour.push(child_contour);
+      else 
+        dfs_contour.push(hierarchy[curr_contour][2]);
     }
 
   }
+
+  //Rect contour_bb = boundingRect(contours[curr_contour]);
+  std::vector<Rect*> text_bbs;  
+  for (auto it = text_candidate_contours.begin(); it != text_candidate_contours.end(); ++it) {
+    Rect * r = new Rect;
+    *r = boundingRect(contours[*it]);
+    text_bbs.push_back(r);
+  }
+
 
   Mat cont_im = Mat::zeros(src.rows, src.cols, CV_8UC3);
   for (auto it = text_candidate_contours.begin(); it != text_candidate_contours.end(); ++it) {
@@ -155,7 +155,9 @@ int main(int argc, char ** argv) {
     drawContours(cont_im, contours, *it, Scalar(255,255,255), CV_FILLED, 8);
   }
   cont_im = ~cont_im;
+  namedWindow("Threshold Test", CV_WINDOW_AUTOSIZE);
   imshow("Threshold Test", cont_im);
+  perceptual_text_grouping::perceptual_text_grouping(src_gray, text_bbs);
   // Wait for escape keypress
   while (true) {
     int c;
@@ -175,24 +177,59 @@ double border_energy(vector<Point> & points, Mat & sobel_image) {
 
   border_energy = border_energy / (double)points.size();
 
-  std::cout << "BE: " << border_energy << std::endl;
+  //std::cout << "BE: " << border_energy << std::endl;
 
   return border_energy;
 }
 
 // Computes the Eigen-Transform texture operator for the image block im
 // l : number of eigenvalues to disgard
-double eigen_texture_measure(Mat im, int l) {
-    // We only need the singular values
+double eigen_texture_measure(vector<Point> & points, Mat im, int n, int l) {
+
+  Rect contour_bb = boundingRect(points);
+  int w = round(contour_bb.size().height / 4.0);
+
+  double texture_measure = 0;
+  for (int i = 0; i < n; ++i) {
+
+    int idx = rand() % points.size(); 
+    std::cout << idx << std::endl;
+
+    Point sample = points[idx];
+
+    if ((sample.x - w < 0) || (sample.x + w >= im.size().width)) {
+      --n;
+      continue;
+    }
+
+    if ((sample.y - w < 0) || (sample.y + w >= im.size().height)) {
+      --n;
+      continue;
+    }
+     
+    Rect roi(sample.x - w, sample.y - w, w, w); 
+
+    Mat image_roi = im(roi);
+    Mat image_roi_float;
+    image_roi.convertTo(image_roi_float, CV_32F);
+
     std::vector<double> singular_vals; 
-    SVD::compute(im, singular_vals, SVD::NO_UV); 
+
+    // We only need the singular values
+    SVD::compute(image_roi_float, singular_vals, SVD::NO_UV); 
 
     int w = singular_vals.size();
 
-    double texture_measure = 0;
-    for (; l < w ; ++l) {
-      texture_measure += singular_vals[l];
+    double eigen_val_sum = 0;
+    for (int j = l; j < w ; ++j) {
+      eigen_val_sum += singular_vals[j];
     }
-    texture_measure /= 1 + w - l;
-    return texture_measure;
+    texture_measure += eigen_val_sum / (1 + w - l);
+  }
+
+  std::cout << "ET: " << texture_measure << std::endl;
+  if (n == 0)
+    return 0;
+  texture_measure /= n;
+  return texture_measure;
 }
