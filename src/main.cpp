@@ -1,12 +1,14 @@
-#include <iostream>
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
 #include <cstdlib>
 #include <cstdio>
+#include <iostream>
 #include <stack>
 #include <set>
 
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
+
 #include "perceptual_text_grouping.h"
+#include "text_candidate_detection.hpp"
 
 using namespace cv;
 
@@ -55,109 +57,21 @@ int main(int argc, char ** argv) {
   /* ##################### */
 
   Mat src = imread(image_file_name, 1);
-  Mat src_gray;
-  cvtColor(src, src_gray, CV_RGB2GRAY);
 
+  std::vector<Rect *> text_bounding_boxes;
+  text_bounding_boxes = text_candidate_detection::text_candidate_detection(src);
 
-  Mat thresh_im;
-  adaptiveThreshold(src_gray, thresh_im, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 17, 0);
-
-  vector<vector<Point> > contours;
-  vector<Vec4i> hierarchy;
-  findContours(thresh_im, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-
-  // Generate Sobel Gradient Image
-  Mat grad_x, grad_y, abs_grad_x, abs_grad_y;
-  Sobel(src_gray, grad_x, CV_32F, 1, 0, 3, 1, 0, BORDER_DEFAULT);
-  Sobel(src_gray, grad_y, CV_32F, 0, 1, 3, 1, 0, BORDER_DEFAULT);
-
-  // Grad 
-  Mat sobel_magnitude;
-  Mat sobel_angle;
-  cartToPolar(grad_x,grad_y,sobel_magnitude,sobel_angle);
-
-  std::stack<int> dfs_contour;
-  std::set<int> text_candidate_contours;
-
-  // Find first contour in first hierarchy
-  for (size_t i = 0; i < contours.size(); i++) {
-    if (hierarchy[i][1] == -1) {
-      dfs_contour.push(i);
-      std::cout << "Pushed " << i << std::endl;
-      break;
-    }
-  }
-
-  // Traversal
-  while (!dfs_contour.empty()) {
-
-    // Pop current contour
-    int curr_contour = dfs_contour.top();
-    dfs_contour.pop();
-
-
-    /*
-    *  Region filtering
-    */ 
-
-    // Size
-    Rect contour_bb = boundingRect(contours[curr_contour]);
-    if (contour_bb.size().area() > 0.5*src.rows*src.cols) {
-      //std::cout << "rejecting region: too large" << std::endl;
-    } else if (contour_bb.size().area() < 600) {
-      //std::cout << "rejecting region: too small" << std::endl;
-    } else if (border_energy(contours[curr_contour], sobel_magnitude) < 40.0) {
-      //std::cout << "rejecting region: border energy too low" << std::endl;
-    } else if (eigen_texture_measure(contours[curr_contour], src_gray, 8, 8) < 0.5) {
-
-    } else {
-
-      // Add to candidates
-      text_candidate_contours.insert(curr_contour);
-
-      // Remove parents
-      int parent_contour = hierarchy[curr_contour][3];
-      while (parent_contour != -1) {
-        text_candidate_contours.erase(parent_contour);
-        parent_contour = hierarchy[parent_contour][3];
-      }
-
-    }
-
-    // Push neighbor
-    if (hierarchy[curr_contour][0] != -1) {
-      dfs_contour.push(hierarchy[curr_contour][0]);
-    }
-
-    // Push Children (This gets traversed first, if possible)
-    if (hierarchy[curr_contour][2] != -1) {
-      int child_contour = hierarchy[hierarchy[curr_contour][2]][2];
-      if (child_contour != -1)
-        dfs_contour.push(child_contour);
-      else 
-        dfs_contour.push(hierarchy[curr_contour][2]);
-    }
-
-  }
-
-  //Rect contour_bb = boundingRect(contours[curr_contour]);
-  std::vector<Rect*> text_bbs;  
-  for (auto it = text_candidate_contours.begin(); it != text_candidate_contours.end(); ++it) {
-    Rect * r = new Rect;
-    *r = boundingRect(contours[*it]);
-    text_bbs.push_back(r);
-  }
-
-
+/*
   Mat cont_im = Mat::zeros(src.rows, src.cols, CV_8UC3);
   for (auto it = text_candidate_contours.begin(); it != text_candidate_contours.end(); ++it) {
     // Show it
     drawContours(cont_im, contours, *it, Scalar(255,255,255), CV_FILLED, 8);
   }
   cont_im = ~cont_im;
+*/
   namedWindow("Threshold Test", CV_WINDOW_AUTOSIZE);
   
-  perceptual_text_grouping::perceptual_text_grouping(cont_im, text_bbs);
+  perceptual_text_grouping::perceptual_text_grouping(src, text_bounding_boxes);
   
   // Wait for escape keypress
   while (true) {
