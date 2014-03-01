@@ -11,6 +11,8 @@
 const int ADAPT_THRESHOLD_WINDOW_SIZE = 17;
 const double SOBEL_THRESHOLD = 40.0;
 const double TEXTURE_THRESHOLD = 0.5;
+const double MIN_AREA_THRESHOLD = 600.0;
+const double FRACTION_OF_IMAGE_THRESHOLD = 0.5;
 
 using namespace cv;
 
@@ -181,9 +183,9 @@ namespace text_candidate_detection {
 
   bool size_filter(Rect contour_bb, const Mat& src) {
 
-    if (contour_bb.size().area() > 0.5*src.rows*src.cols) {
+    if (contour_bb.size().area() > FRACTION_OF_IMAGE_THRESHOLD * src.rows * src.cols) {
       return false;
-    } else if (contour_bb.size().area() < 600) {
+    } else if (contour_bb.size().area() < MIN_AREA_THRESHOLD) {
       return false;
       //std::cout << "rejecting region: too small" << std::endl;
     }
