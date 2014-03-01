@@ -1,16 +1,17 @@
-#include "../include/perceptual_text_grouping.h"
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/types_c.h>
-#include <stddef.h>
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <utility>
-#include <set>
-#include <algorithm>
+
+#include "perceptual_text_grouping.hpp"
+#include <opencv2/core/core.hpp>
+#include <opencv2/core/types_c.h>
 
 // Whether or not to build delaunay triangulation line by line
 const bool LINE_BY_LINE_MODE = false;

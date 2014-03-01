@@ -1,4 +1,4 @@
-#include "perceptual_text_grouping.h"
+#include "perceptual_text_grouping.hpp"
 #include "gtest/gtest.h"
 
 TEST(Perceptual_text_grouping_test, rect_center_point_function) {

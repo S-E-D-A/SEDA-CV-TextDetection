@@ -7,7 +7,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#include "perceptual_text_grouping.h"
+#include "perceptual_text_grouping.hpp"
 #include "text_candidate_detection.hpp"
 
 using namespace cv;
