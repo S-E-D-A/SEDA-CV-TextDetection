@@ -8,6 +8,10 @@
 
 #include "text_candidate_detection.hpp"
 
+const int ADAPT_THRESHOLD_WINDOW_SIZE = 17;
+const double SOBEL_THRESHOLD = 40.0;
+const double TEXTURE_THRESHOLD = 0.5;
+
 using namespace cv;
 
 namespace text_candidate_detection {
@@ -20,7 +24,8 @@ namespace text_candidate_detection {
 
     // Apply thresholding
     Mat thresh_im;
-    adaptiveThreshold(src_gray, thresh_im, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 17, 0);
+    adaptiveThreshold(src_gray, thresh_im, 255, ADAPTIVE_THRESH_MEAN_C, 
+                        THRESH_BINARY, ADAPT_THRESHOLD_WINDOW_SIZE, 0);
 
     // Get connected components in tree hierarchy
     vector<vector<Point> > contours;
@@ -67,9 +72,9 @@ namespace text_candidate_detection {
       Rect contour_bb = boundingRect(contours[curr_contour]);
       if (!size_filter(contour_bb, src)) {
 
-      } else if (border_energy(contours[curr_contour], sobel_magnitude) < 40.0) {
+      } else if (border_energy(contours[curr_contour], sobel_magnitude) < SOBEL_THRESHOLD) {
         //std::cout << "rejecting region: border energy too low" << std::endl;
-      } else if (eigen_texture_measure(contours[curr_contour], src_gray, 8, 8) < 0.5) {
+      } else if (eigen_texture_measure(contours[curr_contour], src_gray, 8, 8) < TEXTURE_THRESHOLD) {
 
       } else {
 
@@ -82,7 +87,6 @@ namespace text_candidate_detection {
           text_candidate_contours.erase(parent_contour);
           parent_contour = hierarchy[parent_contour][3];
         }
-
       }
 
       // Push neighbor
@@ -100,6 +104,7 @@ namespace text_candidate_detection {
       }
     }
 
+    // Output a list of bounding boxes of candidates
     std::vector<Rect*> text_bbs;  
     for (auto it = text_candidate_contours.begin(); it != text_candidate_contours.end(); ++it) {
       Rect * r = new Rect;
@@ -134,7 +139,6 @@ namespace text_candidate_detection {
     for (int i = 0; i < n; ++i) {
 
       int idx = rand() % points.size(); 
-      std::cout << idx << std::endl;
 
       Point sample = points[idx];
 
@@ -168,7 +172,7 @@ namespace text_candidate_detection {
       texture_measure += eigen_val_sum / (1 + w - l);
     }
 
-    std::cout << "ET: " << texture_measure << std::endl;
+    //std::cout << "ET: " << texture_measure << std::endl;
     if (n == 0)
       return 0;
     texture_measure /= n;
