@@ -12,9 +12,6 @@
 
 using namespace cv;
 
-double border_energy(vector<Point> & points, Mat & sobel_image);
-double eigen_texture_measure(vector<Point> & points, Mat im, int n, int l); 
-
 int main(int argc, char ** argv) {
   /* Handles input otpions */
   /* ##################### */
@@ -80,71 +77,4 @@ int main(int argc, char ** argv) {
     if( (char)c == 27 )
       { break; }
   } 
-}
-
-
-double border_energy(vector<Point> & points, Mat & sobel_image) {
-
-  double border_energy = 0.0;
-  for (auto itr = points.begin(); itr != points.end(); ++itr) {
-    border_energy += (float)sobel_image.at<float>(*itr);
-  }
-
-  border_energy = border_energy / (double)points.size();
-
-  //std::cout << "BE: " << border_energy << std::endl;
-
-  return border_energy;
-}
-
-// Computes the Eigen-Transform texture operator for the image block im
-// l : number of eigenvalues to disgard
-double eigen_texture_measure(vector<Point> & points, Mat im, int n, int l) {
-
-  Rect contour_bb = boundingRect(points);
-  int w = round(contour_bb.size().height / 4.0);
-
-  double texture_measure = 0;
-  for (int i = 0; i < n; ++i) {
-
-    int idx = rand() % points.size(); 
-    std::cout << idx << std::endl;
-
-    Point sample = points[idx];
-
-    if ((sample.x - w < 0) || (sample.x + w >= im.size().width)) {
-      --n;
-      continue;
-    }
-
-    if ((sample.y - w < 0) || (sample.y + w >= im.size().height)) {
-      --n;
-      continue;
-    }
-     
-    Rect roi(sample.x - w, sample.y - w, w, w); 
-
-    Mat image_roi = im(roi);
-    Mat image_roi_float;
-    image_roi.convertTo(image_roi_float, CV_32F);
-
-    std::vector<double> singular_vals; 
-
-    // We only need the singular values
-    SVD::compute(image_roi_float, singular_vals, SVD::NO_UV); 
-
-    int w = singular_vals.size();
-
-    double eigen_val_sum = 0;
-    for (int j = l; j < w ; ++j) {
-      eigen_val_sum += singular_vals[j];
-    }
-    texture_measure += eigen_val_sum / (1 + w - l);
-  }
-
-  std::cout << "ET: " << texture_measure << std::endl;
-  if (n == 0)
-    return 0;
-  texture_measure /= n;
-  return texture_measure;
 }
