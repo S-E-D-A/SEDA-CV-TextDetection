@@ -66,15 +66,20 @@ int main(int argc, char ** argv) {
   }
   cont_im = ~cont_im;
 */
-  namedWindow("Threshold Test", CV_WINDOW_AUTOSIZE);
+  namedWindow("Test Window", CV_WINDOW_AUTOSIZE);
   
   perceptual_text_grouping::perceptual_text_grouping(src, text_bounding_boxes);
   
   // Wait for escape keypress
   while (true) {
+
     int c;
     c = waitKey(20);
     if( (char)c == 27 )
       { break; }
+  
+    // If user closes window
+    if (!cvGetWindowHandle("Test Window"))
+      break;
   } 
 }

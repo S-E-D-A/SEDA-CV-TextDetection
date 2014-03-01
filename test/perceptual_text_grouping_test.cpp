@@ -51,9 +51,9 @@ TEST(Perceptual_text_grouping_test, perceptual_text_grouping_random_regions){
 
 	perceptual_text_grouping::perceptual_text_grouping(image, text_region_array);
 
-	imshow("Threshold Test", image);
+	imshow("Test Window", image);
 
-	printf("Press ESC to exit.\n");
+	printf("Press ESC or close window to exit.\n");
 
 	// Wait for escape keypress
 	while (true) {
@@ -61,6 +61,10 @@ TEST(Perceptual_text_grouping_test, perceptual_text_grouping_random_regions){
 	  c = waitKey(20);
 	  if( (char)c == 27 )
 		{ break; }
+
+    // If user closes window
+    if (!cvGetWindowHandle("Test Window"))
+      break;
 	}
 }
 TEST(Perceptual_text_grouping_test, perceptual_text_grouping_function) {
@@ -91,9 +95,9 @@ TEST(Perceptual_text_grouping_test, perceptual_text_grouping_function) {
 
 	perceptual_text_grouping::perceptual_text_grouping(image, text_region_array);
 
-	imshow("Threshold Test", image);
+	imshow("Test Window", image);
 
-	printf("Press ESC to exit.\n");
+	printf("Press ESC or close window to exit.\n");
 
 	// Wait for escape keypress
 	while (true) {
@@ -101,5 +105,9 @@ TEST(Perceptual_text_grouping_test, perceptual_text_grouping_function) {
 	  c = waitKey(20);
 	  if( (char)c == 27 )
 	    { break; }
+
+    // If user closes window
+    if (!cvGetWindowHandle("Test Window"))
+      break;
 	}
 }

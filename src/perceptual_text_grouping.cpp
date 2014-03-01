@@ -81,7 +81,7 @@ namespace perceptual_text_grouping{
 	}
 
     // Draw initial image
-    imshow("Threshold Test", image);
+    imshow("Test Window", image);
 
     if(LINE_BY_LINE_MODE){
         printf("Tap SPACE to iteratively draw lines.\n\n");
@@ -125,7 +125,7 @@ namespace perceptual_text_grouping{
 		  rectangle(image, *A, delaunay_color, 1, 16, 0);
 		  rectangle(image, *B, delaunay_color, 1, 16, 0);
 
-		  imshow("Threshold Test", image);
+		  imshow("Test Window", image);
 	  }
     }
 
@@ -228,7 +228,7 @@ namespace perceptual_text_grouping{
     planarGraph = NULL;
 
     // Draw final region rectangles
-    imshow("Threshold Test", image);
+    imshow("Test Window", image);
 
     return final_text_region_rects;
   };
