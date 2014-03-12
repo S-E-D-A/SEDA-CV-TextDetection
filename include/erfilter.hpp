@@ -66,7 +66,7 @@ namespace cv
     in its outer boundary. A class-specific ER is selected (using a classifier) from all the ER's
     in the component tree of the image.
 */
-struct CV_EXPORTS ERStat
+struct ERStat
 {
 public:
     //! Constructor
@@ -120,12 +120,12 @@ public:
 
     Extracts the component tree (if needed) and filter the extremal regions (ER's) by using a given classifier.
 */
-class CV_EXPORTS ERFilter : public Algorithm
+class ERFilter : public Algorithm
 {
 public:
 
     //! callback with the classifier is made a class. By doing it we hide SVM, Boost etc.
-    class CV_EXPORTS Callback
+    class Callback
     {
     public:
         virtual ~Callback() { }
@@ -178,7 +178,7 @@ public:
     \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb,
+Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb,
                                                   int thresholdDelta = 1, float minArea = 0.00025,
                                                   float maxArea = 0.13, float minProbability = 0.4,
                                                   bool nonMaxSuppression = true,
@@ -198,7 +198,7 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb,
                            from file in samples/cpp/trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
-CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
+Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
                                                   float minProbability = 0.3);
 
 
@@ -208,7 +208,7 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
     (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
 */
 
-CV_EXPORTS Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename);
+Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename);
 
 /*!
     Allow to implicitly load the default classifier when creating an ERFilter object.
@@ -216,7 +216,7 @@ CV_EXPORTS Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename
     (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
 */
 
-CV_EXPORTS Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename);
+Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename);
 
 
 // computeNMChannels operation modes
@@ -239,7 +239,7 @@ enum { ERFILTER_NM_RGBLGrad = 0,
                            ERFILTER_NM_RGBLGrad (by default) and ERFILTER_NM_IHSGrad.
 
 */
-CV_EXPORTS void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode = ERFILTER_NM_RGBLGrad);
+void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode = ERFILTER_NM_RGBLGrad);
 
 
 /*!
@@ -263,7 +263,7 @@ CV_EXPORTS void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels
     \param  minProbability The minimum probability for accepting a group
     \param  groups         The output of the algorithm are stored in this parameter as list of rectangles.
 */
-CV_EXPORTS void erGrouping(InputArrayOfArrays src, std::vector<std::vector<ERStat> > &regions,
+void erGrouping(InputArrayOfArrays src, std::vector<std::vector<ERStat> > &regions,
                                                    const std::string& filename, float minProbablity,
                                                    std::vector<Rect > &groups);
 

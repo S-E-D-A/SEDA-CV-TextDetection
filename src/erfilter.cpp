@@ -79,7 +79,7 @@ ERStat::ERStat(int init_level, int init_pixel, int init_x, int init_y) : pixel(i
 
 
 // the classe implementing the interface for the 1st and 2nd stages of Neumann and Matas algorithm
-class CV_EXPORTS ERFilterNM : public ERFilter
+class ERFilterNM : public ERFilter
 {
 public:
     //Constructor
@@ -142,7 +142,7 @@ private:
 
 
 // default 1st stage classifier
-class CV_EXPORTS ERClassifierNM1 : public ERFilter::Callback
+class ERClassifierNM1 : public ERFilter::Callback
 {
 public:
     //Constructor
@@ -158,7 +158,7 @@ private:
 };
 
 // default 2nd stage classifier
-class CV_EXPORTS ERClassifierNM2 : public ERFilter::Callback
+class ERClassifierNM2 : public ERFilter::Callback
 {
 public:
     //constructor
