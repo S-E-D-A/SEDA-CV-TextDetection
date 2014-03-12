@@ -44,7 +44,12 @@
 #ifndef __OPENCV_OBJDETECT_ERFILTER_HPP__
 #define __OPENCV_OBJDETECT_ERFILTER_HPP__
 
-#include "opencv2/core.hpp"
+//#include "opencv2/imgproc.hpp"
+
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/ml/ml.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
 #include <deque>
 #include <string>
