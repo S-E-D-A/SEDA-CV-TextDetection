@@ -770,7 +770,8 @@ ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *pa
     int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
     Rect rect;
 
-    floodFill( src(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))),
+	Mat m = Mat(src(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))));
+    floodFill( m,
                region, Point(stat->pixel%src.cols - stat->rect.x, stat->pixel/src.cols - stat->rect.y),
                Scalar(255), &rect, Scalar(stat->level), Scalar(0), flags );
     rect.width += 2;
@@ -2652,7 +2653,8 @@ float extract_features(InputOutputArray src, vector<ERStat> &regions, vector<ERF
             int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
             Rect rect;
 
-            floodFill( grey(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))),
+			Mat m = Mat(grey(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))));
+            floodFill( m,
                        region, Point(stat->pixel%grey.cols - stat->rect.x, stat->pixel/grey.cols - stat->rect.y),
                        Scalar(255), &rect, Scalar(stat->level), Scalar(0), flags );
             rect.width += 2;
@@ -2976,7 +2978,8 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
                 int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
                 Rect rect;
 
-                floodFill( grey(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))),
+				Mat m = Mat(grey(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))));
+                floodFill( m,
                            region, Point(stat->pixel%grey.cols - stat->rect.x, stat->pixel/grey.cols - stat->rect.y),
                            Scalar(255), &rect, Scalar(stat->level), Scalar(0), flags );
 
