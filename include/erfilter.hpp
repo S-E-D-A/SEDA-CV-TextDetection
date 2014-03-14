@@ -120,7 +120,8 @@ public:
 
     Extracts the component tree (if needed) and filter the extremal regions (ER's) by using a given classifier.
 */
-class ERFilter : public Algorithm
+//class ERFilter : public Algorithm
+class ERFilter 
 {
 public:
 
