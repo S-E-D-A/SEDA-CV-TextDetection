@@ -1123,7 +1123,7 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
 Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename)
 
 {
-    return makePtr<ERClassifierNM1>(filename);
+	return Ptr<ERFilter::Callback>(new ERClassifierNM1(filename));
 }
 
 /*!
@@ -1133,7 +1133,7 @@ Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename)
 */
 Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename)
 {
-    return makePtr<ERClassifierNM2>(filename);
+	return Ptr<ERFilter::Callback>(new ERClassifierNM2(filename));
 }
 
 
