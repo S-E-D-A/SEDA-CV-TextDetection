@@ -2668,7 +2668,7 @@ float extract_features(InputOutputArray src, vector<ERStat> &regions, vector<ERF
             f.intensity_std  = (float)std[0];
 
             Mat tmp;
-            distanceTransform(rect_mask, tmp, DIST_L1,3);
+            distanceTransform(rect_mask, tmp, CV_DIST_L1,3);
 
             meanStdDev(tmp,mean,std,rect_mask);
             f.stroke_mean = mean[0];
