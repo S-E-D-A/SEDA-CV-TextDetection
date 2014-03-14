@@ -3077,7 +3077,7 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
                 {
                     double angle = atan2((double)(pt0.y-pt1.y),(double)(pt0.x-pt1.x));
                     //if ( (abs(angle) < 0.35) || (abs(angle) > 5.93) || ((abs(angle) > 2.79)&&(abs(angle) < 3.49)) )
-                    if ( (abs(angle) < 0.25) || (abs(angle) > 6.03) || ((abs(angle) > 2.88)&&(abs(angle) < 3.4)) )
+                    if ( (std::abs(angle) < 0.25) || (std::abs(angle) > 6.03) || ((std::abs(angle) > 2.88)&&(std::abs(angle) < 3.4)) )
                     {
                         horiz_edges++;
                         edge_distances.push_back((float)norm(pt0-pt1));
@@ -3154,7 +3154,7 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
 
             if (y_intersection > 0.6*(max(text_boxes.at(i).height,text_boxes.at(j).height)))
             {
-                int xdist = min(abs(ax2-bx1),abs(bx2-ax1));
+                int xdist = min(std::abs(ax2-bx1),std::abs(bx2-ax1));
                 Rect intersection  = text_boxes.at(i) & text_boxes.at(j);
                 if ( (xdist < 0.75*(max(text_boxes.at(i).height,text_boxes.at(j).height))) ||
                      (intersection.width != 0))
