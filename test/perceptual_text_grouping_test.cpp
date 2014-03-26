@@ -26,7 +26,7 @@ TEST(Perceptual_text_grouping_test, construct_planar_graph_function) {
 }
 
 TEST(Perceptual_text_grouping_test, perceptual_text_grouping_random_regions){
-	Mat image = imread("test.png", 1);
+	Mat image = imread("images/test.png", 1);
 
 	vector<Rect*> text_region_array;
 
@@ -68,7 +68,7 @@ TEST(Perceptual_text_grouping_test, perceptual_text_grouping_random_regions){
 	}
 }
 TEST(Perceptual_text_grouping_test, perceptual_text_grouping_function) {
-	Mat image = imread("test.png", 1);
+	Mat image = imread("images/test.png", 1);
 
 	vector<Rect*> text_region_array;
 
