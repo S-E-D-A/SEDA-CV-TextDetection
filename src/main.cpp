@@ -66,7 +66,7 @@ int main(int argc, char ** argv) {
   }
   cont_im = ~cont_im;
 */
-  namedWindow("Test Window", CV_WINDOW_AUTOSIZE);
+  namedWindow("Test Window", CV_WINDOW_NORMAL);
   
   perceptual_text_grouping::perceptual_text_grouping(src, text_bounding_boxes);
   
