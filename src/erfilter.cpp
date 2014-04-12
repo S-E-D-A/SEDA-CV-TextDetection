@@ -1076,7 +1076,7 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
     CV_Assert( (thresholdDelta >= 0) && (thresholdDelta <= 128) );
     CV_Assert( (minProbabilityDiff >= 0.) && (minProbabilityDiff <= 1.) );
 
-    Ptr<ERFilterNM> filter = Ptr<ERFilterNM>(new ERFilterNM());
+	Ptr<ERFilter> filter = new ERFilterNM();
 
     filter->setCallback(cb);
 
@@ -1086,7 +1086,7 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
     filter->setMinProbability(minProbability);
     filter->setNonMaxSuppression(nonMaxSuppression);
     filter->setMinProbabilityDiff(minProbabilityDiff);
-    return (Ptr<ERFilter>)filter;
+    return filter;
 }
 
 /*!
@@ -1108,12 +1108,12 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
 
     CV_Assert( (minProbability >= 0.) && (minProbability <= 1.) );
 
-    Ptr<ERFilterNM> filter = Ptr<ERFilterNM>(new ERFilterNM());
+	Ptr<ERFilter> filter = new ERFilterNM();
 
     filter->setCallback(cb);
 
     filter->setMinProbability(minProbability);
-    return (Ptr<ERFilter>)filter;
+    return filter;
 }
 
 /*!
