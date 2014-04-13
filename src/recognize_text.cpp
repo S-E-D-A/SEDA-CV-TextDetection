@@ -34,6 +34,16 @@ namespace recognize_text
 		vector<Rect> groups;
 		erGrouping(channels, regions, "models/trained_classifier_erGrouping.xml", 0.5, groups);
 
+		// draw components
+		Mat display_im = src.clone();
+		for (int c=0; c<(int)channels.size(); c++)
+		{
+			src = display_im.clone();
+			components_draw(src, regions[c]);
+			imshow("components", src);
+			waitKey();
+		}
+
 		// draw groups
 		groups_draw(src, groups);
 		imshow("grouping",src);
@@ -52,6 +62,17 @@ namespace recognize_text
 			groups.clear();
 		}
 
+	}
+
+	void components_draw(Mat &src, vector<ERStat> &comps)
+	{
+		for (int i=0; i<(int)comps.size(); i++)
+		{
+			if (src.type() == CV_8UC3)
+				rectangle(src, comps[i].rect.tl(), comps[i].rect.br(), Scalar( 0, 255, 0), 3, 8);
+			else
+				rectangle(src, comps[i].rect.tl(), comps[i].rect.br(), Scalar( 255 ), 3, 8);
+		}
 	}
 
 	void groups_draw(Mat &src, vector<Rect> &groups)
