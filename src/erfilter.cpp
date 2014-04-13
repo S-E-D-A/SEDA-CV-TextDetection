@@ -301,12 +301,13 @@ void ERFilterNM::er_tree_extract( InputArray image )
 
             int neighbour_pixel = current_pixel;
 
+						// Update neighbor_pixel according to current_edge (enum)
             switch (current_edge)
             {
-                    case 0: if (x < width - 1) neighbour_pixel = current_pixel + 1;  break;
-                    case 1: if (y < height - 1) neighbour_pixel = current_pixel + width; break;
-                    case 2: if (x > 0) neighbour_pixel = current_pixel - 1; break;
-                    default: if (y > 0) neighbour_pixel = current_pixel - width; break;
+                    case 0: if (x < width - 1) neighbour_pixel = current_pixel + 1;  break;			//Right
+                    case 1: if (y < height - 1) neighbour_pixel = current_pixel + width; break; //Down
+                    case 2: if (x > 0) neighbour_pixel = current_pixel - 1; break;							//Left
+                    default: if (y > 0) neighbour_pixel = current_pixel - width; break;					//Up
             }
 
             // if neighbour is not accessible, mark it accessible and retreive its grey-level value
