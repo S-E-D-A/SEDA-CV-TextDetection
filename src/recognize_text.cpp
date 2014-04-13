@@ -29,11 +29,6 @@ namespace recognize_text
 			er_filter2->run(channels[c], regions[c]);
 		}
 
-		// Detect character groups
-		cout << "Grouping extracted ERs ... ";
-		vector<Rect> groups;
-		erGrouping(channels, regions, "models/trained_classifier_erGrouping.xml", 0.5, groups);
-
 		// draw components
 		Mat display_im = src.clone();
 		for (int c=0; c<(int)channels.size(); c++)
@@ -43,10 +38,6 @@ namespace recognize_text
 			imshow("components", src);
 			waitKey();
 		}
-
-		// draw groups
-		groups_draw(src, groups);
-		imshow("grouping",src);
 
 		cout << "Done!" << endl << endl;
 		cout << "Press 'e' to show the extracted Extremal Regions, any other key to exit." << endl << endl;
