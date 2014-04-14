@@ -51,8 +51,10 @@
 #include <opencv2/ml/ml.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
+#include <forward_list>
 #include <deque>
 #include <string>
+#include <algorithm>
 
 namespace cv
 {

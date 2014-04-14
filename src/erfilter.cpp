@@ -1259,9 +1259,15 @@ void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode
 struct ERRegion
 {
 	Rect rect;
-	int channel_index;
 	double score;
+	int channel;
+	int index;
 };
+
+bool sort_regions(const ERRegion &r1, const ERRegion &r2)
+{
+	return (r1.score > r2.score);
+}
 
 void er_nms(vector<vector<ERStat> > &regions, double threshold)
 {
@@ -1269,16 +1275,25 @@ void er_nms(vector<vector<ERStat> > &regions, double threshold)
 	if (regions.empty())
 		return;
 
-	vector<ERRegion> boxes;
+	forward_list<ERRegion> box_list;
 	for (int c=0; c<(int)regions.size(); c++)
 	{
 		for (int i=0; i<(int)regions[c].size(); i++)
 		{
 			ERStat stat = regions[c][i];
-			ERRegion box = {stat.rect, c, stat.probability};
-
+			ERRegion box = {stat.rect, stat.probability, c, i};
+			box_list.push_front(box);
 		}
 	}
+	
+	box_list.sort(sort_regions);
+
+	for (auto it = box_list.begin(); it != box_list.end(); ++it)
+		cout << "box at " << it->channel << " , " << it->index << " score is " << it->score << endl;
+
+
+
+	
 }
 
 
