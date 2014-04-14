@@ -21,7 +21,7 @@ CXX		    = g++
 CPPFLAGS	= -isystem $(GTEST_DIR)/include
 CXXFLAGS	= -Wextra -pthread
 CXXFLAGS	+= --std=c++0x -D_LINUX -msse3 -Wall -O3 $(INCLUDES) $(LIBFLAGS)
-LIBFLAGS	= -L -/usr/local/lib -llapack -lblas -lopencv_core -lopencv_highgui -lopencv_imgproc 
+LIBFLAGS	= -L -/usr/local/lib -llapack -lblas -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_ml
 
 # Google Test
 GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \

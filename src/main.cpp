@@ -5,6 +5,7 @@
 #include <sstream>
 #include <stack>
 #include <set>
+#include <vector>
 
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -12,8 +13,13 @@
 
 #include "perceptual_text_grouping.hpp"
 #include "text_candidate_detection.hpp"
+#include "recognize_text.hpp"
 
 using namespace cv;
+using namespace std;
+
+void groups_draw(Mat &src, vector<Rect> &groups);
+void er_show(vector<Mat> &channels, vector<vector<ERStat> > &regions);
 
 int main(int argc, char ** argv) {
   /* Handles input otpions */
@@ -112,13 +118,14 @@ int main(int argc, char ** argv) {
   }    
 
   Mat src = imread(image_file_name, 1);
+	Mat src_w_regions = src.clone();
   namedWindow("Test Window", CV_WINDOW_AUTOSIZE);
   clock_t t;
   t = std::clock();
   std::vector<Rect *> text_bounding_boxes;
-  text_bounding_boxes = text_candidate_detection::text_candidate_detection(src);
+  text_bounding_boxes = text_candidate_detection::text_candidate_detection(src_w_regions);
   
-  perceptual_text_grouping::perceptual_text_grouping(src, text_bounding_boxes);
+  perceptual_text_grouping::perceptual_text_grouping(src_w_regions, text_bounding_boxes);
   t = std::clock() - t;
   printf ("It took me %d clicks (%f seconds).\n",(int)t,((float)t)/CLOCKS_PER_SEC);
   
@@ -127,11 +134,20 @@ int main(int argc, char ** argv) {
 
     int c;
     c = waitKey(20);
-    if( (char)c == 27 )
-      { break; }
+
+    if( (char)c == 114 ) // 'r'
+		{
+			recognize_text::recognize_text(src);
+		}
+		else if ( (char)c == 27 ) // 'ESC'	
+			break;
   
     // If user closes window
     if (!cvGetWindowHandle("Test Window"))
       break;
   } 
+
+	return 0;
 }
+
+
