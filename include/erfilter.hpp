@@ -264,6 +264,8 @@ void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode
     \param  minProbability The minimum probability for accepting a group
     \param  groups         The output of the algorithm are stored in this parameter as list of rectangles.
 */
+
+void er_nms(std::vector<std::vector<ERStat> > &regions, double threshold);
 void erGrouping(InputArrayOfArrays src, std::vector<std::vector<ERStat> > &regions,
                                                    const std::string& filename, float minProbablity,
                                                    std::vector<Rect > &groups);

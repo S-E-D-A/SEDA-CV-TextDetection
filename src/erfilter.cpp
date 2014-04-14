@@ -1252,6 +1252,34 @@ void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode
     }
 }
 
+/* ------------------------------------------------------------------------------------*/
+/* -------------------------------- ER Recognition Algorithm --------------------------*/
+/* ------------------------------------------------------------------------------------*/
+
+struct ERRegion
+{
+	Rect rect;
+	int channel_index;
+	double score;
+};
+
+void er_nms(vector<vector<ERStat> > &regions, double threshold)
+{
+
+	if (regions.empty())
+		return;
+
+	vector<ERRegion> boxes;
+	for (int c=0; c<(int)regions.size(); c++)
+	{
+		for (int i=0; i<(int)regions[c].size(); i++)
+		{
+			ERStat stat = regions[c][i];
+			ERRegion box = {stat.rect, c, stat.probability};
+
+		}
+	}
+}
 
 
 /* ------------------------------------------------------------------------------------*/

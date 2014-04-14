@@ -29,6 +29,8 @@ namespace recognize_text
 			er_filter2->run(channels[c], regions[c]);
 		}
 
+		//erGrouping(channels, regions, "models/trained_classifier_erGrouping.xml", 0.5, groups);
+
 		// draw components
 		Mat display_im = src.clone();
 		for (int c=0; c<(int)channels.size(); c++)
@@ -39,6 +41,12 @@ namespace recognize_text
 			waitKey();
 		}
 
+		// draw groups
+		//groups_draw(src, groups);
+		//imshow("grouping",src);
+
+		er_nms(regions, 0.3);
+
 		cout << "Done!" << endl << endl;
 		cout << "Press 'e' to show the extracted Extremal Regions, any other key to exit." << endl << endl;
 		if( waitKey (-1) == 101)
@@ -48,10 +56,10 @@ namespace recognize_text
 		er_filter1.release();
 		er_filter2.release();
 		regions.clear();
-		if (!groups.empty())
-		{
-			groups.clear();
-		}
+		//if (!groups.empty())
+		//{
+		//	groups.clear();
+		//}
 
 	}
 
