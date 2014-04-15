@@ -7,13 +7,18 @@ namespace recognize_text
 	{	
 
 		// Extract channels to be processed individually
-		vector<Mat> channels;
-		computeNMChannels(src, channels);
+		vector<Mat> channels_all;
+		computeNMChannels(src, channels_all);
+
+		// Use subset of channels to simplify
+		vector<Mat> channels; //TODO: remove
+		channels.push_back(channels_all[0]);
+		channels.push_back(255-channels[0]);
 
 		int cn = (int)channels.size();
 		// Append negative channels to detect ER- (bright regions over dark background)
-		for (int c = 0; c < cn-1; c++)
-			channels.push_back(255-channels[c]);
+		//for (int c = 0; c < cn-1; c++)
+			//channels.push_back(255-channels[c]);
 
 		// Create ERFilter objects with the 1st and 2nd stage default classifiers
 		Ptr<ERFilter> er_filter1 = createERFilterNM1(loadClassifierNM1("models/trained_classifierNM1.xml"),16,0.00015f,0.13f,0.2f,true,0.1f);
@@ -29,37 +34,28 @@ namespace recognize_text
 			er_filter2->run(channels[c], regions[c]);
 		}
 
-		//erGrouping(channels, regions, "models/trained_classifier_erGrouping.xml", 0.5, groups);
-
 		// draw components
 		Mat display_im = src.clone();
-		for (int c=0; c<(int)channels.size(); c++)
-		{
-			src = display_im.clone();
-			components_draw(src, regions[c]);
-			imshow("components", src);
-			waitKey();
-		}
-
-		// draw groups
-		//groups_draw(src, groups);
-		//imshow("grouping",src);
-
-		er_nms(regions, 0.3);
+		//for (int c=0; c<(int)channels.size(); c++)
+		//{
+		//	src = display_im.clone();
+		//	components_draw(src, regions[0]);
+		//	imshow("components", src);
+		//	waitKey();
+		//}
+		
+		vector<vector<ERStat> > words;
+		erWordLine(display_im, channels, regions);
 
 		cout << "Done!" << endl << endl;
-		cout << "Press 'e' to show the extracted Extremal Regions, any other key to exit." << endl << endl;
-		if( waitKey (-1) == 101)
-			er_show(channels,regions);
+		//cout << "Press 'e' to show the extracted Extremal Regions, any other key to exit." << endl << endl;
+		//if( waitKey (-1) == 101)
+		//	er_show(channels,regions);
 
 		// memory clean-up
 		er_filter1.release();
 		er_filter2.release();
 		regions.clear();
-		//if (!groups.empty())
-		//{
-		//	groups.clear();
-		//}
 
 	}
 
@@ -162,9 +158,9 @@ namespace recognize_text
 		for (int i=0; i<(int)comps.size(); i++)
 		{
 			if (src.type() == CV_8UC3)
-				rectangle(src, comps[i].rect.tl(), comps[i].rect.br(), Scalar( 0, 255, 0), 3, 8);
+				rectangle(src, comps[i].rect.tl(), comps[i].rect.br(), Scalar( 0, 255, 0), 1, 8);
 			else
-				rectangle(src, comps[i].rect.tl(), comps[i].rect.br(), Scalar( 255 ), 3, 8);
+				rectangle(src, comps[i].rect.tl(), comps[i].rect.br(), Scalar( 255 ), 1, 8);
 		}
 	}
 

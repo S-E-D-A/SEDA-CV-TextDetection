@@ -3168,4 +3168,59 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
     }
 
 }
+
+void erShow(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions)
+{
+	for (int c=0; c<(int)channels.size(); c++)
+		{
+			Mat dst = Mat::zeros(channels[0].rows+2,channels[0].cols+2,CV_8UC1);
+			for (int r=0; r<(int)regions[c].size(); r++)
+			{
+				ERStat er = regions[c][r];
+				if (er.parent != NULL) // deprecate the root region
+				{
+					int newmaskval = 255;
+					int flags = 4 + (newmaskval << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
+					//int flags = 4 + (newmaskval << 8) + FLOODFILL_FIXED_RANGE;
+					floodFill(channels[c],dst,Point(er.pixel%channels[c].cols,er.pixel/channels[c].cols),
+								Scalar(255),0,Scalar(er.level),Scalar(0),flags);
+				}
+			}
+			Mat out = Mat::zeros(img.rows, img.cols, CV_8UC3);
+			vector<Mat> clr_channels;
+			split(out, clr_channels);
+			Mat msk(dst, Range(1, dst.rows-1), Range(1, dst.cols-1));
+			clr_channels[0] = clr_channels[0] + msk;
+			merge(clr_channels, out);
+
+			char buff[10]; char *buff_ptr = buff;
+			sprintf(buff, "channel %d", c);
+			imshow(buff_ptr, out);
+			cvMoveWindow(buff_ptr, 400*c, 50);
+			waitKey();
+		}
+		waitKey(-1);
+
+}	
+
+void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions)
+{
+
+	CV_Assert ( !img.empty() );
+
+	// assert correct image type
+	//CV_Assert( img.type() == CV_8UC1 );
+
+	CV_Assert( !regions.empty() );
+
+	erShow(img, channels, regions);
+	
+
+
 }
+
+}
+
+
+
+

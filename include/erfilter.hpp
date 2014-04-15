@@ -50,6 +50,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/ml/ml.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp> //TODO: remove
 #include <vector>
 #include <forward_list>
 #include <deque>
@@ -270,6 +271,7 @@ void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode
 void erGrouping(InputArrayOfArrays src, std::vector<std::vector<ERStat> > &regions,
                                                    const std::string& filename, float minProbablity,
                                                    std::vector<Rect > &groups);
+void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions);
 
 }
 #endif // _OPENCV_ERFILTER_HPP_
