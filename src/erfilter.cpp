@@ -3182,6 +3182,11 @@ bool sortByChannel(ERChar erc1, ERChar erc2)
 	return (erc1.channel > erc2.channel);
 }
 
+bool sortByX(ERChar erc1, ERChar erc2)
+{
+	return (erc1.stat.rect.tl().x < erc2.stat.rect.tl().x);
+}
+
 void erShow(Mat &img, vector<Mat> &channels, vector<ERChar> &chars)
 {
 	// Sort for efficency
@@ -3246,6 +3251,11 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 
 	// Show all regions
 	erShow(img, channels, chars);
+
+	sort(chars.begin(), chars.end(), sortByX);
+
+	//for (int i=0; i<(int)chars.size(); i++)
+	//	cout << "row " << chars[i].stat.rect.tl().y << " col " << chars[i].stat.rect.tl().x << endl;
 
 
 }
