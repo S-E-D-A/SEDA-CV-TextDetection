@@ -57,7 +57,7 @@
 #include <string>
 #include <algorithm>
 #include <unordered_map>
-#include <set>
+#include <unordered_set>
 
 namespace cv
 {

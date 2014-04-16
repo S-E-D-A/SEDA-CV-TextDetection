@@ -3186,20 +3186,20 @@ struct ERWord
 //{
 //	return (erc1.channel > erc2.channel);
 //}
-struct ptrstat_x_cmp 
-{
-	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
-	{
-		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
-	}
-};
+//struct ptrstat_x_cmp 
+//{
+//	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
+//	{
+//		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
+//	}
+//};
 
 bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
 {
 		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
 }
 
-void erShow(Mat &img, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
+void erShow(int rows, int cols, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
 {
 	// Sort for efficency
 	//sort(chars.begin(), chars.end(), sortByChannel);
@@ -3224,22 +3224,22 @@ void erShow(Mat &img, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
 		}
 	}
 
+	Mat out = Mat::zeros(rows, cols, CV_8UC3);
+	vector<Mat> clr_channels;
+	split(out, clr_channels);
 	for (int c=0; c<(int)channels.size(); c++)
 	{
-		Mat out = Mat::zeros(img.rows, img.cols, CV_8UC3);
-		vector<Mat> clr_channels;
-		split(out, clr_channels);
-
 		Mat disp(masks[c], Range(1, masks[c].rows-1), Range(1, masks[c].cols-1));
-		clr_channels[0] = clr_channels[0] + disp;
+		if (c==0)
+			clr_channels[0] = clr_channels[0] + disp;
+		else
+			clr_channels[1] = clr_channels[1] + disp;
 		merge(clr_channels, out);
-
-		char buff[10]; char *buff_ptr = buff;
-		sprintf(buff, "channel %d", c);
-		imshow(buff_ptr, out);
-		cvMoveWindow(buff_ptr, 400*c, 50);
-		waitKey();
 	}
+
+	imshow("Regions", out);
+	cvMoveWindow("Regions", 200, 50);
+	waitKey();
 
 }	
 
@@ -3272,6 +3272,9 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	CV_Assert( !img.empty() );
 	CV_Assert( !regions.empty() );
 
+	int ROWS = img.rows;
+	int COLS = img.cols;
+
 	vector<Ptr<ERChar> > chars;
 	for (int i=0; i<(int)regions.size(); i++)
 	{
@@ -3288,22 +3291,33 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	sort(chars.begin(), chars.end(), sortByX);	
 
 	// Show all regions
-	erShow(img, channels, chars);
+	erShow(ROWS, COLS, channels, chars);
 
 	// Vector of sets to store candidate words
-	vector<set<Ptr<ERChar>, ptrstat_x_cmp> > words;
+	vector<unordered_set<Ptr<ERChar> > > words;
 
 	// Create pairwise words
 	vector<Ptr<ERChar> >::iterator it1, it2;
 	it1 = chars.begin();
 	while ( it1 != chars.end() ) 
 	{
+		if ((*it1)->stat.parent == NULL)
+		{
+			cout << "it1 null parent " << endl;
+			it1++;
+		}
 		it2 = it1;
 		it2++;
 
+		vector<Ptr<ERChar> > pair;
 		while ( it2 != chars.end() )
 		{
-			
+			Ptr<ERChar> er1 = *it1;
+			Ptr<ERChar> er2 = *it2;
+			pair.push_back(er1);
+			pair.push_back(er2);
+			erShow(ROWS, COLS, channels, pair);
+			pair.clear();
 
 			it2++;
 		}
