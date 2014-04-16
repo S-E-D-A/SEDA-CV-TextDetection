@@ -3177,6 +3177,11 @@ struct ERChar
 	int channel;
 };
 
+struct ERWord
+{
+	vector<ERChar> letters;
+};
+
 bool sortByChannel(ERChar erc1, ERChar erc2)
 {
 	return (erc1.channel > erc2.channel);
@@ -3187,7 +3192,7 @@ bool sortByX(ERChar erc1, ERChar erc2)
 	return (erc1.stat.rect.tl().x < erc2.stat.rect.tl().x);
 }
 
-void erShow(Mat &img, vector<Mat> &channels, vector<ERChar> &chars)
+void erShow(Mat &img, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
 {
 	// Sort for efficency
 	//sort(chars.begin(), chars.end(), sortByChannel);
@@ -3201,8 +3206,8 @@ void erShow(Mat &img, vector<Mat> &channels, vector<ERChar> &chars)
 
 	for (int i=0; i<(int)chars.size(); i++)
 	{
-		ERStat er = chars[i].stat;
-		int c = chars[i].channel;
+		ERStat er = chars[i]->stat;
+		int c = chars[i]->channel;
 		if (er.parent != NULL)
 		{
 			int newmaskval = 255;
@@ -3237,14 +3242,14 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	CV_Assert( !img.empty() );
 	CV_Assert( !regions.empty() );
 
-	vector<ERChar> chars;
+	vector<Ptr<ERChar> > chars;
 	for (int i=0; i<(int)regions.size(); i++)
 	{
 		for (int j=0; j<(int)regions[i].size(); j++)
 		{
-			ERChar erc;
-			erc.stat = regions[i][j];
-			erc.channel = i;
+			Ptr<ERChar> erc = new ERChar();
+			erc->stat = regions[i][j];
+			erc->channel = i;
 			chars.push_back(erc);
 		}
 	}
@@ -3252,11 +3257,29 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	// Show all regions
 	erShow(img, channels, chars);
 
-	sort(chars.begin(), chars.end(), sortByX);
+	//sort(chars.begin(), chars.end(), sortByX);
 
 	//for (int i=0; i<(int)chars.size(); i++)
 	//	cout << "row " << chars[i].stat.rect.tl().y << " col " << chars[i].stat.rect.tl().x << endl;
+	
 
+	//vector<ERChar>::iterator it1, it2;
+	//it1 = chars.begin();
+	//while ( it1 != chars.end() ) 
+	//{
+	//	it2 = it1;
+	//	it2++;
+
+	//	while ( it2 != chars.end() )
+	//	{
+
+
+
+	//		it2++;
+	//	}
+
+	//	it1++;
+	//}
 
 }
 
