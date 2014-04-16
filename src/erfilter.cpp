@@ -3236,6 +3236,29 @@ void erShow(Mat &img, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
 
 }	
 
+bool v1(Ptr<ERStat> r1, Ptr<ERStat> r2)
+{
+	double w_max;
+	if (r1->rect.width > r2->rect.width)
+		w_max = r1->rect.width;
+	else
+		w_max = r2->rect.height;
+
+	Point c1;
+	c1.x = r1->rect.x + (r1->rect.width/2);
+	c1.y = r1->rect.y + (r1->rect.height/2);
+
+	Point c2;
+	c2.x = r2->rect.x + (r2->rect.width/2);
+	c2.y = r2->rect.y + (r2->rect.height/2);
+
+	double d = norm(c2-c1);
+	if (d > w_max*3)
+		return false;
+	else
+		return true;
+}
+
 void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions)
 {
 
