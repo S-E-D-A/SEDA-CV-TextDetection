@@ -86,24 +86,32 @@ int main(int argc, char ** argv) {
 
     namedWindow("Test Window",CV_WINDOW_AUTOSIZE); //create a window called "MyVideo"
 
+    clock_t t;
+    t = std::clock();
     while (1)
     {
-        Mat frame;
-        bool bSuccess = cap.read(frame); // read a new frame from video
+      Mat frame;
+      bool bSuccess = cap.read(frame); // read a new frame from video
       if (!bSuccess) //if not success, break loop
       {
         std::cout << "Cannot read a frame from video stream" << std::endl;
         break;
       }
-
       imshow("Test Window", frame); //show the frame in "MyVideo" window
+      t = std::clock() - t;
+      std::cout << "\r" << 1.0 / (((float)t) / CLOCKS_PER_SEC) << " fps     " << std::flush;
+      t = std::clock();
 
       std::vector<Rect *> text_bounding_boxes;
       text_bounding_boxes = text_candidate_detection::text_candidate_detection(frame);
       perceptual_text_grouping::perceptual_text_grouping(frame, text_bounding_boxes);
-
-      if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+  
+      char k = waitKey(30);
+      if (k == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
           break; 
+      // If user closes window
+      if (!cvGetWindowHandle("Test Window"))
+        break;
     }
 
     return 0;
