@@ -3173,10 +3173,10 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
 
 #define PI 3.14159265
 
-const double DIST_MAX_RATIO = 3;
+const double DIST_MAX_RATIO = 2;
 const double DIST_MIN_RATIO = 0.2;
 const double HEIGHT_RATIO = 2;
-const double HORIZ_ANGLE = 30;
+const double HORIZ_ANGLE = 20;
 const double MS_DELAY = 50;
 const int MIN_WORD_LENGTH = 4;
 
@@ -3410,7 +3410,7 @@ void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set, doubl
 						er.pixel/channels[c].cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
 			Point BR = er.rect.br();
 			BR.x = BR.x + 1; BR.y = BR.y + 1; //To account for mask size difference
-			circle(masks[c], BR, 5, Scalar(255));
+			//circle(masks[c], BR, 5, Scalar(255));
 			//pts.push_back(BR);
 
 			//if (BR.x < leftmost.x)
@@ -3515,15 +3515,14 @@ bool isSubWord(ERChar_set s1, ERChar_set s2)
 		return false;
 }
 
-void pruneSubwords(int ROWS, int COLS,vector<Mat> &channels, vector<list<ERChar_set> > &words)
+void pruneSubwords(vector<list<ERChar_set> > &words)
 {
 
 	for (int d=0; d<(int)words.size(); d++)
 	{
 
 		// Clear minimum word length words
-		//if ( d < MIN_WORD_LENGTH-2 )
-		if (d < 1)
+		if ( d < MIN_WORD_LENGTH-2 )
 		{
 			words[d].clear();
 			continue;
@@ -3532,27 +3531,26 @@ void pruneSubwords(int ROWS, int COLS,vector<Mat> &channels, vector<list<ERChar_
 		list<ERChar_set>::iterator it1;
 		list<ERChar_set>::iterator it2;
 
-		for (it1 = words[d-1].begin(); it1 != words[d-1].end(); it1++)
+		bool erased = true;
+		for (it1 = words[d-1].begin(); it1 != words[d-1].end(); )
 		{
-			ERChar_set small = (*it1);
-			cout << "small" << endl;
-			erShow(ROWS, COLS, channels, small, 0);
 
+			ERChar_set small = (*it1);
 			for(it2 = words[d].begin(); it2 != words[d].end(); it2++)
 			{
 				ERChar_set big = (*it2);
-				cout << "big" << endl;
-				erShow(ROWS, COLS, channels, big, 0);
-
 				if ( isSubWord(small,big) )
 				{
 					it1 = words[d-1].erase(it1);
-					cout << "ERASE" << endl;
+					erased = true;
 					break;
 				}
 			}
-		}
 
+			if (!erased)
+				it1++;
+			erased = false;
+		}
 	
 	}
 
@@ -3718,14 +3716,14 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	//			erShow(ROWS, COLS, channels, words[d][s], MS_DELAY);
 
 	// Prune subwords from words
-	pruneSubwords(ROWS, COLS, channels, words);
+	pruneSubwords(words);
 
 	// Show all ERs
 	for (int d=0; d<(int)words.size(); d++)
 	{
 		list<ERChar_set>::iterator s;
-			for (s=words[d].begin(); s != words[d].end(); s++)
-				erShow(ROWS, COLS, channels, (*s), 0);
+		for (s=words[d].begin(); s != words[d].end(); s++)
+			erShow(ROWS, COLS, channels, (*s), 0);
 	}
 	
 
