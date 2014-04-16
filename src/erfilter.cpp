@@ -3168,4 +3168,248 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
     }
 
 }
+
+// --------------------------- Word line filtering ---------------------------------
+
+#define PI 3.14159265
+
+const double DIST_MAX_RATIO = 3;
+const double DIST_MIN_RATIO = 0.2;
+const double HEIGHT_RATIO = 2;
+const double HORIZ_ANGLE = 30;
+
+struct ERChar
+{
+	ERStat stat;
+	int channel;
+};
+
+struct ERWord
+{
+	vector<ERChar> letters;
+};
+
+//bool sortByChannel(ERChar erc1, ERChar erc2)
+//{
+//	return (erc1.channel > erc2.channel);
+//}
+//struct ptrstat_x_cmp 
+//{
+//	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
+//	{
+//		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
+//	}
+//};
+
+bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
+{
+		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
 }
+
+//bool isParentChild_helper(ERStat* node, ERStat* compare, bool look_up)
+//{
+//
+//	if (node == compare)
+//		return true;
+//
+//	if (node == NULL)
+//		return false;
+//
+//	if (look_up)
+//		return ( isParentChild_helper(node->parent, compare, true) );
+//	else
+//	{
+//		for (ERStat * child = node->child; child; child = child->next)
+//   	{
+//    	if (isParentChild_helper( child, compare, false ) )
+//				return true;
+//    }
+//	}
+//	return false;
+//
+//}
+//
+//bool isParentChild(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
+//{
+//	// Must be formed from same channel to be paren-child
+//	if (erc1->channel != erc2->channel)
+//		return false;
+//
+//	//TODO: Will the references to these objects be the same as the parents & childs
+//	//			in the ERStat* tree? Have not tested yet
+//	stat1 = erc1->stat;
+//	stat2 = erc2->stat;
+//
+//	// If nodes are the same
+//	if (erc1 == erc2)
+//		return true;
+//
+//	if (isParentChild_helper(erc1, erc2, true) || isParentChild_helper(erc1, erc2, false) )
+//		return true
+//
+//	return false;
+//
+//}
+
+void erShow(int rows, int cols, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
+{
+	// Sort for efficency
+	//sort(chars.begin(), chars.end(), sortByChannel);
+
+	vector<Mat> masks;
+	for (int c=0; c<(int)channels.size(); c++)
+	{
+		Mat blank = Mat::zeros(channels[c].rows+2,channels[0].cols+2,CV_8UC1);
+		masks.push_back(blank);
+	}
+
+	for (int i=0; i<(int)chars.size(); i++)
+	{
+		ERStat er = chars[i]->stat;
+		int c = chars[i]->channel;
+		if (er.parent != NULL)
+		{
+			int newmaskval = 255;
+			int flags = 4 + (newmaskval << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
+			floodFill(channels[c],masks[c],Point(er.pixel%channels[c].cols,
+						er.pixel/channels[c].cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
+		}
+	}
+
+	Mat out = Mat::zeros(rows, cols, CV_8UC3);
+	vector<Mat> clr_channels;
+	split(out, clr_channels);
+	for (int c=0; c<(int)channels.size(); c++)
+	{
+		Mat disp(masks[c], Range(1, masks[c].rows-1), Range(1, masks[c].cols-1));
+		if (c==0)
+			clr_channels[0] = clr_channels[0] + disp;
+		else
+			clr_channels[1] = clr_channels[1] + disp;
+		merge(clr_channels, out);
+	}
+
+	imshow("Regions", out);
+	cvMoveWindow("Regions", 200, 50);
+	waitKey();
+
+}	
+
+bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
+{
+	Rect& r1 = er1->stat.rect;
+	Rect& r2 = er2->stat.rect;
+
+	// Compare centroid distances
+	double w_max;
+	if (r1.width > r2.width)
+		w_max = r1.width;
+	else
+		w_max = r2.width;
+
+	Point c1;
+	c1.x = r1.x + (r1.width/2);
+	c1.y = r1.y + (r1.height/2);
+
+	Point c2;
+	c2.x = r2.x + (r2.width/2);
+	c2.y = r2.y + (r2.height/2);
+
+
+	// Hueristic for parent-child relationship
+	double d = norm(c2-c1);
+	if (d > w_max*DIST_MAX_RATIO || d < w_max*DIST_MIN_RATIO)
+		return false;
+
+
+	// Compare angle between centroids
+	Point diag = c2 - c1;
+	double deg = asin(diag.y / norm(diag)) * 180.0 / PI;
+
+	if (std::abs(deg) > HORIZ_ANGLE)
+		return false;
+	
+
+	// Compare heights
+	double h1 = r1.height;
+	double h2 = r2.height;
+
+	if (h1/h2 > HEIGHT_RATIO || h2/h1 > HEIGHT_RATIO)
+		return false;
+
+	return true;
+}
+
+void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions)
+{
+
+	CV_Assert( !img.empty() );
+	CV_Assert( !regions.empty() );
+
+	int ROWS = img.rows;
+	int COLS = img.cols;
+
+	vector<Ptr<ERChar> > chars;
+	for (int i=0; i<(int)regions.size(); i++)
+	{
+		for (int j=0; j<(int)regions[i].size(); j++)
+		{
+			Ptr<ERChar> erc = new ERChar();
+			erc->stat = regions[i][j];
+			erc->channel = i;
+			chars.push_back(erc);
+		}
+	}
+
+	// Sort chars by X position (since one reads left to right)
+	sort(chars.begin(), chars.end(), sortByX);	
+
+	// Show all regions
+	erShow(ROWS, COLS, channels, chars);
+
+	// Vector of sets to store candidate words
+	vector<unordered_set<Ptr<ERChar> > > words;
+
+	// Create pairwise words
+	vector<Ptr<ERChar> >::iterator it1, it2;
+	it1 = chars.begin();
+	while ( it1 != chars.end() ) 
+	{
+		if ((*it1)->stat.parent == NULL)
+		{
+			cout << "it1 null parent " << endl;
+			it1++;
+		}
+		it2 = it1;
+		it2++;
+
+		vector<Ptr<ERChar> > pair;
+		while ( it2 != chars.end() )
+		{
+			Ptr<ERChar> er1 = *it1;
+			Ptr<ERChar> er2 = *it2;
+			if ( v1(er1, er2) )
+			{
+				pair.push_back(er1);
+				pair.push_back(er2);
+				erShow(ROWS, COLS, channels, pair);
+			}
+
+			pair.clear();
+			it2++;
+		}
+
+		it1++;
+	}
+
+}
+
+}
+
+
+
+
+
+
+
+
