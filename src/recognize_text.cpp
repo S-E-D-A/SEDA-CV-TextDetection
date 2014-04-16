@@ -48,9 +48,9 @@ namespace recognize_text
 		erWordLine(display_im, channels, regions);
 
 		cout << "Done!" << endl << endl;
-		//cout << "Press 'e' to show the extracted Extremal Regions, any other key to exit." << endl << endl;
-		//if( waitKey (-1) == 101)
-		//	er_show(channels,regions);
+		cout << "Press 'e' to show the extracted Extremal Regions, any other key to exit." << endl << endl;
+		if( waitKey (-1) == 101)
+			er_show(channels,regions);
 
 		// memory clean-up
 		er_filter1.release();

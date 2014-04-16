@@ -3277,6 +3277,112 @@ bool compareERChar_sets(ERChar_set s1, ERChar_set s2)
 
 }
 
+//vector<vector<int> > GenerateCombinations(int n, int k)
+//{
+//
+//	vector<vector<int> > all_combs;
+//	vector<int> comb;
+//
+//	vector<bool> v(n);
+//  fill(v.begin() + n - k, v.end(), true);
+//
+//  do {
+//      for (int i = 0; i < n; ++i) {
+//          if (v[i]) {
+//							comb.push_back(i+1);
+//              //std::cout << (i+1) << " ";
+//          }
+//      }
+//      //std::cout << "\n";
+//			all_combs.push_back(comb);
+//			comb.clear();
+//  } while (std::next_permutation(v.begin(), v.end()));
+//
+//
+//	return all_combs;
+//}
+//
+//double median(Mat a, int N)
+//{
+//	Mat s;
+//	cv::sort(a,s, CV_SORT_EVERY_ROW);
+//
+//	double med;
+//	if (N%2)
+//	{
+//		int middle1 = N/2;
+//		int middle2 = middle1 + 1;
+//		double med1 = s.at<double>(middle1);
+//		double med2 = s.at<double>(middle2);
+//		med = (med1 + med2)/2;
+//	}
+//	else
+//	{	
+//		int middle = N/2;
+//		med = s.at<double>(middle);
+//	}
+//
+//	return med;
+//
+//}
+//
+//Point LeastMedSquares(vector<Point> pts)
+//{
+//
+//	int N = (int)pts.size();
+//
+//	Mat X = Mat::ones(N,2, CV_64F);		
+//	for (int n=0; n<N; n++)
+//		X.at<double>(n,1) = pts[n].x;
+//
+//	Mat y = Mat::zeros(N,1, CV_64F);
+//	for (int n=0; n<N; n++)
+//		y.at<double>(n,0) = pts[n].y;
+//
+//	vector<vector<int> > combs = GenerateCombinations(N, 3);
+//
+//	double a_best = 0;
+//	double b_best = 0;
+//	double d_min = 9999999;
+//
+//	for (int i=0; i<(int)combs.size(); i++)
+//	{
+//		vector<int> idx;
+//		idx = combs[i];
+//
+//		double xi,xj,xk,yi,yj,yk;
+//		xi = pts[idx[0]].x;
+//		xj = pts[idx[1]].x;
+//		xk = pts[idx[2]].x;
+//		yi = pts[idx[0]].y;
+//		yj = pts[idx[1]].y;
+//		yk = pts[idx[2]].y;
+//
+//		double b = (yi - yk)/(xi - xk);
+//		double a = (yj + yk - b*(xj + xk) )/2;
+//		
+//		Mat w = Mat::zeros(2,1, CV_64F);		
+//		w.at<double>(0,0) = a;
+//		w.at<double>(1,0) = b;
+//		Mat r = cv::abs(y - X*w);
+//		double d = median(r,N);
+//
+//		if (d < d_min)
+//		{
+//			d_min = d;
+//			a_best = a;
+//			b_best = b;
+//		}
+//
+//	}
+//
+//	Point out;
+//	out.x = a_best;
+//	out.y = b_best;
+//
+//	return out;
+//}
+
 void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 {
 	vector<Mat> masks;
@@ -3286,6 +3392,10 @@ void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 		masks.push_back(blank);
 	}
 
+	//vector<Point> pts;
+	//Point leftmost, rightmost;
+	//leftmost.x = cols;
+	//rightmost.x = 0;
 	ERChar_set::iterator it;
 	for (it = er_set.begin(); it != er_set.end(); it++)
 	{
@@ -3300,8 +3410,19 @@ void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 			Point BR = er.rect.br();
 			BR.x = BR.x + 1; BR.y = BR.y + 1; //To account for mask size difference
 			circle(masks[c], BR, 5, Scalar(255));
+			//pts.push_back(BR);
+
+			//if (BR.x < leftmost.x)
+			//	leftmost.x = BR.x;
+			//if (BR.x > rightmost.x)
+			//	rightmost.x = BR.x;
 		}
 	}
+	//Point lineParams = LeastMedSquares(pts);
+	//leftmost.y = lineParams.x + lineParams.y*leftmost.x;
+	//rightmost.y = lineParams.x + lineParams.y*rightmost.x;
+	//line(masks[0], leftmost, rightmost, Scalar(255), 2);
+
 
 	Mat out = Mat::zeros(rows, cols, CV_8UC3);
 	vector<Mat> clr_channels;
