@@ -3171,6 +3171,9 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
 
 // --------------------------- Word line filtering ---------------------------------
 
+const double DIST_MAX_RATIO = 3;
+const double DIST_MIN_RATIO = 0.5;
+
 struct ERChar
 {
 	ERStat stat;
@@ -3263,7 +3266,7 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 	c2.y = r2.y + (r2.height/2);
 
 	double d = norm(c2-c1);
-	if (d > w_max*3 || d < w_max/2)
+	if (d > w_max*DIST_MAX_RATIO || d < w_max/DIST_MIN_RATIO)
 		return false;
 	else
 		return true;
