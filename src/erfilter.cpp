@@ -3171,9 +3171,12 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
 
 // --------------------------- Word line filtering ---------------------------------
 
+#define PI 3.14159265
+
 const double DIST_MAX_RATIO = 3;
 const double DIST_MIN_RATIO = 0.5;
 const double HEIGHT_RATIO = 2;
+const double HORIZ_ANGLE = 30;
 
 struct ERChar
 {
@@ -3272,6 +3275,14 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 		return false;
 
 
+	// Compare angle between centroids
+	Point diag = c2 - c1;
+	double deg = asin(diag.y / norm(diag)) * 180.0 / PI;
+
+	if (std::abs(deg) > HORIZ_ANGLE)
+		return false;
+	
+
 	// Compare heights
 	double h1 = r1.height;
 	double h2 = r2.height;
@@ -3279,6 +3290,7 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 	if (h1/h2 > HEIGHT_RATIO || h2/h1 > HEIGHT_RATIO)
 		return false;
 
+	
 
 	return true;
 }
