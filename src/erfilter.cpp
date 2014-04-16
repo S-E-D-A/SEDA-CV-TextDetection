@@ -3193,18 +3193,20 @@ struct ERWord
 //{
 //	return (erc1.channel > erc2.channel);
 //}
-//struct ptrstat_x_cmp 
-//{
-//	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
-//	{
-//		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
-//	}
-//};
+struct ptrstat_x_cmp 
+{
+	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
+	{
+		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
+	}
+};
 
 bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
 {
 		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
 }
+
+typedef set<Ptr<ERChar>, ptrstat_x_cmp> ERChar_set;
 
 //bool isParentChild_helper(ERStat* node, ERStat* compare, bool look_up)
 //{
@@ -3251,11 +3253,8 @@ bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
 //
 //}
 
-void erShow(int rows, int cols, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
+void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 {
-	// Sort for efficency
-	//sort(chars.begin(), chars.end(), sortByChannel);
-
 	vector<Mat> masks;
 	for (int c=0; c<(int)channels.size(); c++)
 	{
@@ -3263,10 +3262,11 @@ void erShow(int rows, int cols, vector<Mat> &channels, vector<Ptr<ERChar> > &cha
 		masks.push_back(blank);
 	}
 
-	for (int i=0; i<(int)chars.size(); i++)
+	ERChar_set::iterator it;
+	for (it = er_set.begin(); it != er_set.end(); it++)
 	{
-		ERStat er = chars[i]->stat;
-		int c = chars[i]->channel;
+		ERStat er = (*it)->stat;
+		int c = (*it)->channel;
 		if (er.parent != NULL)
 		{
 			int newmaskval = 255;
@@ -3349,7 +3349,7 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	int ROWS = img.rows;
 	int COLS = img.cols;
 
-	vector<Ptr<ERChar> > chars;
+	ERChar_set er_all;
 	for (int i=0; i<(int)regions.size(); i++)
 	{
 		for (int j=0; j<(int)regions[i].size(); j++)
@@ -3357,23 +3357,23 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 			Ptr<ERChar> erc = new ERChar();
 			erc->stat = regions[i][j];
 			erc->channel = i;
-			chars.push_back(erc);
+			er_all.insert(erc);
 		}
 	}
 
 	// Sort chars by X position (since one reads left to right)
-	sort(chars.begin(), chars.end(), sortByX);	
+	//sort(chars.begin(), chars.end(), sortByX);	
 
 	// Show all regions
-	erShow(ROWS, COLS, channels, chars);
+	erShow(ROWS, COLS, channels, er_all);
 
 	// Vector of sets to store candidate words
-	vector<unordered_set<Ptr<ERChar> > > words;
+	vector<ERChar_set> words;
 
 	// Create pairwise words
-	vector<Ptr<ERChar> >::iterator it1, it2;
-	it1 = chars.begin();
-	while ( it1 != chars.end() ) 
+	ERChar_set::iterator it1, it2;
+	it1 = er_all.begin();
+	while ( it1 != er_all.end() ) 
 	{
 		if ((*it1)->stat.parent == NULL)
 		{
@@ -3383,22 +3383,20 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 		it2 = it1;
 		it2++;
 
-		vector<Ptr<ERChar> > pair;
-		while ( it2 != chars.end() )
+		ERChar_set pair;
+		while ( it2 != er_all.end() )
 		{
 			Ptr<ERChar> er1 = *it1;
 			Ptr<ERChar> er2 = *it2;
 			if ( v1(er1, er2) )
 			{
-				pair.push_back(er1);
-				pair.push_back(er2);
+				pair.insert(er1);
+				pair.insert(er2);
 				erShow(ROWS, COLS, channels, pair);
 			}
-
 			pair.clear();
 			it2++;
 		}
-
 		it1++;
 	}
 
