@@ -3243,24 +3243,27 @@ void erShow(int rows, int cols, vector<Mat> &channels, vector<Ptr<ERChar> > &cha
 
 }	
 
-bool v1(Ptr<ERStat> r1, Ptr<ERStat> r2)
+bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 {
+	Rect& r1 = er1->stat.rect;
+	Rect& r2 = er2->stat.rect;
+
 	double w_max;
-	if (r1->rect.width > r2->rect.width)
-		w_max = r1->rect.width;
+	if (r1.width > r2.width)
+		w_max = r1.width;
 	else
-		w_max = r2->rect.height;
+		w_max = r2.height;
 
 	Point c1;
-	c1.x = r1->rect.x + (r1->rect.width/2);
-	c1.y = r1->rect.y + (r1->rect.height/2);
+	c1.x = r1.x + (r1.width/2);
+	c1.y = r1.y + (r1.height/2);
 
 	Point c2;
-	c2.x = r2->rect.x + (r2->rect.width/2);
-	c2.y = r2->rect.y + (r2->rect.height/2);
+	c2.x = r2.x + (r2.width/2);
+	c2.y = r2.y + (r2.height/2);
 
 	double d = norm(c2-c1);
-	if (d > w_max*3)
+	if (d > w_max*3 || d < w_max/2)
 		return false;
 	else
 		return true;
@@ -3314,11 +3317,14 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 		{
 			Ptr<ERChar> er1 = *it1;
 			Ptr<ERChar> er2 = *it2;
-			pair.push_back(er1);
-			pair.push_back(er2);
-			erShow(ROWS, COLS, channels, pair);
-			pair.clear();
+			if ( v1(er1, er2) )
+			{
+				pair.push_back(er1);
+				pair.push_back(er2);
+				erShow(ROWS, COLS, channels, pair);
+			}
 
+			pair.clear();
 			it2++;
 		}
 
