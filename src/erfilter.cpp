@@ -3177,6 +3177,7 @@ const double DIST_MAX_RATIO = 3;
 const double DIST_MIN_RATIO = 0.2;
 const double HEIGHT_RATIO = 2;
 const double HORIZ_ANGLE = 30;
+const double MS_DELAY = 0.0;
 
 struct ERChar
 {
@@ -3296,6 +3297,9 @@ void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 			int flags = 4 + (newmaskval << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
 			floodFill(channels[c],masks[c],Point(er.pixel%channels[c].cols,
 						er.pixel/channels[c].cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
+			Point BR = er.rect.br();
+			BR.x = BR.x + 1; BR.y = BR.y + 1; //To account for mask size difference
+			circle(masks[c], BR, 5, Scalar(255));
 		}
 	}
 
@@ -3314,7 +3318,7 @@ void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 
 	imshow("Regions", out);
 	cvMoveWindow("Regions", 200, 50);
-	waitKey(100);
+	waitKey(MS_DELAY);
 
 }	
 
@@ -3387,12 +3391,8 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 		}
 	}
 
-	// Sort chars by X position (since one reads left to right)
-	//sort(chars.begin(), chars.end(), sortByX);	
-
 	// Show all regions
 	erShow(ROWS, COLS, channels, er_all);
-
 
 	vector<vector<ERChar_set> > words;
 	// Vector of sets to store candidate words
@@ -3464,9 +3464,6 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 				subset_2N.insert(*it_mid_1);
 			}
 
-			//cout << "subset is size " << subset_2N.size() << endl;
-			//waitKey();
-
 			// New word or subword to be added	
 			ERChar_set subset_1N;
 			for (it2 = it1; it2 != words[d-1].end(); it2++ )
@@ -3527,9 +3524,6 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 		
 	}
 
-	//for (int d=0; d < (int)words.size(); d++)
-	//		for (int s=0; s < (int)words[d].size(); s++)
-	//			erShow(ROWS, COLS, channels, words[d][s]);
 
 }
 
