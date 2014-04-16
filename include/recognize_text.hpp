@@ -17,7 +17,6 @@ using namespace std;
 namespace recognize_text
 {
 	void recognize_text(Mat &src);
-	//void er_nms(std::vector<std::vector<ERStat> > &regions, double threshold);
 	void components_draw(Mat &src, vector<ERStat> &comps);
 	void groups_draw(Mat &src, vector<Rect> &groups);
 	void er_show(vector<Mat> &channels, vector<vector<ERStat> > &regions);
