@@ -3174,7 +3174,7 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
 #define PI 3.14159265
 
 const double DIST_MAX_RATIO = 3;
-const double DIST_MIN_RATIO = 0.5;
+const double DIST_MIN_RATIO = 0.2;
 const double HEIGHT_RATIO = 2;
 const double HORIZ_ANGLE = 30;
 
@@ -3205,6 +3205,51 @@ bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
 {
 		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
 }
+
+//bool isParentChild_helper(ERStat* node, ERStat* compare, bool look_up)
+//{
+//
+//	if (node == compare)
+//		return true;
+//
+//	if (node == NULL)
+//		return false;
+//
+//	if (look_up)
+//		return ( isParentChild_helper(node->parent, compare, true) );
+//	else
+//	{
+//		for (ERStat * child = node->child; child; child = child->next)
+//   	{
+//    	if (isParentChild_helper( child, compare, false ) )
+//				return true;
+//    }
+//	}
+//	return false;
+//
+//}
+//
+//bool isParentChild(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
+//{
+//	// Must be formed from same channel to be paren-child
+//	if (erc1->channel != erc2->channel)
+//		return false;
+//
+//	//TODO: Will the references to these objects be the same as the parents & childs
+//	//			in the ERStat* tree? Have not tested yet
+//	stat1 = erc1->stat;
+//	stat2 = erc2->stat;
+//
+//	// If nodes are the same
+//	if (erc1 == erc2)
+//		return true;
+//
+//	if (isParentChild_helper(erc1, erc2, true) || isParentChild_helper(erc1, erc2, false) )
+//		return true
+//
+//	return false;
+//
+//}
 
 void erShow(int rows, int cols, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
 {
@@ -3270,8 +3315,10 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 	c2.x = r2.x + (r2.width/2);
 	c2.y = r2.y + (r2.height/2);
 
+
+	// Hueristic for parent-child relationship
 	double d = norm(c2-c1);
-	if (d > w_max*DIST_MAX_RATIO || d < w_max/DIST_MIN_RATIO)
+	if (d > w_max*DIST_MAX_RATIO || d < w_max*DIST_MIN_RATIO)
 		return false;
 
 
@@ -3289,8 +3336,6 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 
 	if (h1/h2 > HEIGHT_RATIO || h2/h1 > HEIGHT_RATIO)
 		return false;
-
-	
 
 	return true;
 }
