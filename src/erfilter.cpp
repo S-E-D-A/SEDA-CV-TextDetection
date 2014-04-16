@@ -3177,7 +3177,8 @@ const double DIST_MAX_RATIO = 3;
 const double DIST_MIN_RATIO = 0.2;
 const double HEIGHT_RATIO = 2;
 const double HORIZ_ANGLE = 30;
-const double MS_DELAY = 0.0;
+const double MS_DELAY = 50;
+const int MIN_WORD_LENGTH = 4;
 
 struct ERChar
 {
@@ -3383,7 +3384,7 @@ bool compareERChar_sets(ERChar_set s1, ERChar_set s2)
 //	return out;
 //}
 
-void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
+void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set, double delay)
 {
 	vector<Mat> masks;
 	for (int c=0; c<(int)channels.size(); c++)
@@ -3439,7 +3440,7 @@ void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 
 	imshow("Regions", out);
 	cvMoveWindow("Regions", 200, 50);
-	waitKey(MS_DELAY);
+	waitKey(delay);
 
 }	
 
@@ -3488,6 +3489,76 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 	return true;
 }
 
+// Assume s1 is shorter than s2
+bool isSubWord(ERChar_set s1, ERChar_set s2)
+{
+	if (s1.empty() || s2.empty())
+		return false;
+
+	ERChar_set::iterator it1 = s1.begin();
+	ERChar_set::iterator it2 = s2.begin();
+	
+	while ( it1 != s1.end() && it2 != s2.end() )
+	{
+		if ( (*it1) == (*it2) )
+		{
+			it1++;
+			it2++;
+		}
+		else
+			it2++;
+	}
+
+	if ( it1 == s1.end())
+		return true;
+	else
+		return false;
+}
+
+void pruneSubwords(int ROWS, int COLS,vector<Mat> &channels, vector<list<ERChar_set> > &words)
+{
+
+	for (int d=0; d<(int)words.size(); d++)
+	{
+
+		// Clear minimum word length words
+		//if ( d < MIN_WORD_LENGTH-2 )
+		if (d < 1)
+		{
+			words[d].clear();
+			continue;
+		}
+
+		list<ERChar_set>::iterator it1;
+		list<ERChar_set>::iterator it2;
+
+		for (it1 = words[d-1].begin(); it1 != words[d-1].end(); it1++)
+		{
+			ERChar_set small = (*it1);
+			cout << "small" << endl;
+			erShow(ROWS, COLS, channels, small, 0);
+
+			for(it2 = words[d].begin(); it2 != words[d].end(); it2++)
+			{
+				ERChar_set big = (*it2);
+				cout << "big" << endl;
+				erShow(ROWS, COLS, channels, big, 0);
+
+				if ( isSubWord(small,big) )
+				{
+					it1 = words[d-1].erase(it1);
+					cout << "ERASE" << endl;
+					break;
+				}
+			}
+		}
+
+	
+	}
+
+
+}
+
 void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions)
 {
 
@@ -3513,18 +3584,18 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	}
 
 	// Show all regions
-	erShow(ROWS, COLS, channels, er_all);
+	erShow(ROWS, COLS, channels, er_all, 0);
 
-	vector<vector<ERChar_set> > words;
-	// Vector of sets to store candidate words
+	vector<list<ERChar_set> > words;
+	// Vector of list of sets to store candidate words
 	// Outer vector:	determines length
 	// 								[0] all length 1 words or subwords
 	// 								[1] all length 2 words or subwords
 	// 																:
 	//																 
-	// Inner vector:	words or subwords of that length
+	// Inner list:	words or subwords of that length
 
-	vector<ERChar_set> words_of_length;
+	list<ERChar_set> words_of_length;
 
 	// Create pairwise words
 	{
@@ -3564,7 +3635,7 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	// Create words of length N > 2
 	for (int d = 1; !words[d-1].empty(); d++ )
 	{
-		vector<ERChar_set>::iterator it1, it2;
+		list<ERChar_set>::iterator it1, it2;
 		it1	= words[d-1].begin();	
 		for (it1 = words[d-1].begin(); it1 != words[d-1].end(); it1++ )
 		{
@@ -3636,14 +3707,27 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 		words.push_back(words_of_length);
 		words_of_length.clear();
 
-		for (int s=0; s < (int)words[d].size(); s++)
-			erShow(ROWS, COLS, channels, words[d][s]);
 
 		cout << "Just finished words of length " << d+1 << endl;
 		
-			 
-		
 	}
+
+	// Show all ERs
+	//for (int d=0; d<(int)words.size(); d++)
+	//		for (int s=0; s<(int)words[d].size(); s++)
+	//			erShow(ROWS, COLS, channels, words[d][s], MS_DELAY);
+
+	// Prune subwords from words
+	pruneSubwords(ROWS, COLS, channels, words);
+
+	// Show all ERs
+	for (int d=0; d<(int)words.size(); d++)
+	{
+		list<ERChar_set>::iterator s;
+			for (s=words[d].begin(); s != words[d].end(); s++)
+				erShow(ROWS, COLS, channels, (*s), 0);
+	}
+	
 
 
 }

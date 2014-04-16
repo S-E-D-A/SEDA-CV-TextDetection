@@ -52,7 +52,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp> //TODO: remove
 #include <vector>
-#include <forward_list>
+#include <list>
 #include <deque>
 #include <string>
 #include <algorithm>
