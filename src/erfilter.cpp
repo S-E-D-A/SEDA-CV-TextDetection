@@ -3182,14 +3182,21 @@ struct ERWord
 	vector<ERChar> letters;
 };
 
-bool sortByChannel(ERChar erc1, ERChar erc2)
+//bool sortByChannel(ERChar erc1, ERChar erc2)
+//{
+//	return (erc1.channel > erc2.channel);
+//}
+struct ptrstat_x_cmp 
 {
-	return (erc1.channel > erc2.channel);
-}
+	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
+	{
+		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
+	}
+};
 
-bool sortByX(ERChar erc1, ERChar erc2)
+bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
 {
-	return (erc1.stat.rect.tl().x < erc2.stat.rect.tl().x);
+		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
 }
 
 void erShow(Mat &img, vector<Mat> &channels, vector<Ptr<ERChar> > &chars)
@@ -3277,32 +3284,32 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 		}
 	}
 
+	// Sort chars by X position (since one reads left to right)
+	sort(chars.begin(), chars.end(), sortByX);	
+
 	// Show all regions
 	erShow(img, channels, chars);
 
-	//sort(chars.begin(), chars.end(), sortByX);
+	// Vector of sets to store candidate words
+	vector<set<Ptr<ERChar>, ptrstat_x_cmp> > words;
 
-	//for (int i=0; i<(int)chars.size(); i++)
-	//	cout << "row " << chars[i].stat.rect.tl().y << " col " << chars[i].stat.rect.tl().x << endl;
-	
+	// Create pairwise words
+	vector<Ptr<ERChar> >::iterator it1, it2;
+	it1 = chars.begin();
+	while ( it1 != chars.end() ) 
+	{
+		it2 = it1;
+		it2++;
 
-	//vector<ERChar>::iterator it1, it2;
-	//it1 = chars.begin();
-	//while ( it1 != chars.end() ) 
-	//{
-	//	it2 = it1;
-	//	it2++;
+		while ( it2 != chars.end() )
+		{
+			
 
-	//	while ( it2 != chars.end() )
-	//	{
+			it2++;
+		}
 
-
-
-	//		it2++;
-	//	}
-
-	//	it1++;
-	//}
+		it1++;
+	}
 
 }
 
