@@ -3393,8 +3393,17 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	// Show all regions
 	erShow(ROWS, COLS, channels, er_all);
 
+
+	vector<vector<ERChar_set> > words;
 	// Vector of sets to store candidate words
-	vector<ERChar_set> words;
+	// Outer vector:	determines length
+	// 								[0] all length 1 words or subwords
+	// 								[1] all length 2 words or subwords
+	// 																:
+	//																 
+	// Inner vector:	words or subwords of that length
+
+	vector<ERChar_set> words_of_length;
 
 	// Create pairwise words
 	{
@@ -3419,7 +3428,7 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 				{
 					pair.insert(er1);
 					pair.insert(er2);
-					words.push_back(pair);
+					words_of_length.push_back(pair);
 				}
 				pair.clear();
 				it2++;
@@ -3427,89 +3436,100 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 			it1++;
 		}
 	}
+	words.push_back(words_of_length);
+	words_of_length.clear();
 	
-	for (int i=0; i<(int)words.size(); i++)
-		erShow(ROWS, COLS, channels, words[i]);
 
-
-	// Create length three words
-	vector<ERChar_set>::iterator it1, it2;
- 	it1	= words.begin();	
-	for (it1 = words.begin(); it1 != words.end(); it1++ )
+	// Create words of length N > 2
+	for (int d = 1; !words[d-1].empty(); d++ )
 	{
-		// Word or subword at it1
-		ERChar_set er_set1 = *it1;
-			
-		// First letter of word or subword at it1
-		Ptr<ERChar> subset_1;
-		subset_1 = (*er_set1.begin());
-
-		// Generate the subword from n=2,...,N at it1
-		ERChar_set subset_2N;
-		ERChar_set::iterator it_mid_1;
-		it_mid_1 = er_set1.begin();
-		it_mid_1++;
-		for ( ; it_mid_1 != er_set1.end(); it_mid_1++)	
+		vector<ERChar_set>::iterator it1, it2;
+		it1	= words[d-1].begin();	
+		for (it1 = words[d-1].begin(); it1 != words[d-1].end(); it1++ )
 		{
-			subset_2N.insert(*it_mid_1);
-		}
+			// Word or subword at it1
+			ERChar_set er_set1 = *it1;
+				
+			// First letter of word or subword at it1
+			Ptr<ERChar> subset_1;
+			subset_1 = (*er_set1.begin());
 
-		//cout << "subset is size " << subset_2N.size() << endl;
-		//waitKey();
-
-		// New word or subword to be added	
-		ERChar_set subset_1N;
-		for (it2 = it1; it2 != words.end(); it2++ )
-		{
-			// Word or subword at it2
-			ERChar_set er_set2 = *it2;
-
-			// Generate subword from n=1,...,N-1 at it2
-			ERChar_set subset_1N1;
-			ERChar_set::iterator it_mid_2, it_end_2;
-			it_mid_2 = er_set2.begin();
-			it_end_2 = er_set2.end();
-			it_end_2--; //Stopping point at N-2
-			for ( ; it_mid_2 != it_end_2; it_mid_2++)
+			// Generate the subword from n=2,...,N at it1
+			ERChar_set subset_2N;
+			ERChar_set::iterator it_mid_1;
+			it_mid_1 = er_set1.begin();
+			it_mid_1++;
+			for ( ; it_mid_1 != er_set1.end(); it_mid_1++)	
 			{
-				subset_1N1.insert(*it_mid_2);
+				subset_2N.insert(*it_mid_1);
 			}
 
-			// Compare to word at it2 which should be length N-1
-			CV_Assert( subset_2N.size() == subset_1N1.size() );
+			//cout << "subset is size " << subset_2N.size() << endl;
+			//waitKey();
 
-			// Last letter of word of subword at it2
-			Ptr<ERChar> subset_N;
-			ERChar_set::iterator it_last_2 = er_set2.end();
-			it_last_2--;
-			subset_N = (*it_last_2);
-
-			if ( compareERChar_sets(subset_2N, subset_1N1) )
+			// New word or subword to be added	
+			ERChar_set subset_1N;
+			for (it2 = it1; it2 != words[d-1].end(); it2++ )
 			{
-				// Insert the first letter from it1
-				subset_1N.insert(subset_1);
-				
-				// Insert all the letters from the overlap of it1 and it2 (length N-1)
-				ERChar_set::iterator it_mid;
-				it_mid = subset_1N1.begin();
-				for ( ; it_mid != subset_1N1.end(); it_mid++)
-					subset_1N.insert(*it_mid);
+				// Word or subword at it2
+				ERChar_set er_set2 = *it2;
 
-				// Insert the last letter from it2
-				subset_1N.insert(subset_N);
+				// Generate subword from n=1,...,N-1 at it2
+				ERChar_set subset_1N1;
+				ERChar_set::iterator it_mid_2, it_end_2;
+				it_mid_2 = er_set2.begin();
+				it_end_2 = er_set2.end();
+				it_end_2--; //Stopping point at N-2
+				for ( ; it_mid_2 != it_end_2; it_mid_2++)
+				{
+					subset_1N1.insert(*it_mid_2);
+				}
+
+				// Compare to word at it2 which should be length N-1
+				CV_Assert( subset_2N.size() == subset_1N1.size() );
+
+				// Last letter of word of subword at it2
+				Ptr<ERChar> subset_N;
+				ERChar_set::iterator it_last_2 = er_set2.end();
+				it_last_2--;
+				subset_N = (*it_last_2);
+
+				if ( compareERChar_sets(subset_2N, subset_1N1) )
+				{
+					// Insert the first letter from it1
+					subset_1N.insert(subset_1);
+					
+					// Insert all the letters from the overlap of it1 and it2 (length N-1)
+					ERChar_set::iterator it_mid;
+					it_mid = subset_1N1.begin();
+					for ( ; it_mid != subset_1N1.end(); it_mid++)
+						subset_1N.insert(*it_mid);
+
+					// Insert the last letter from it2
+					subset_1N.insert(subset_N);
 
 
-				erShow(ROWS, COLS, channels, subset_1N);
-				
-
+					words_of_length.push_back(subset_1N);
+				}
+				subset_1N.clear();
 			}
-
-			subset_1N.clear();
-			
-
-	
 		}
-	} 
+
+		words.push_back(words_of_length);
+		words_of_length.clear();
+
+		for (int s=0; s < (int)words[d].size(); s++)
+			erShow(ROWS, COLS, channels, words[d][s]);
+
+		cout << "Just finished words of length " << d+1 << endl;
+		
+			 
+		
+	}
+
+	//for (int d=0; d < (int)words.size(); d++)
+	//		for (int s=0; s < (int)words[d].size(); s++)
+	//			erShow(ROWS, COLS, channels, words[d][s]);
 
 }
 
