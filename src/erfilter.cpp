@@ -3182,6 +3182,7 @@ struct ERChar
 {
 	ERStat stat;
 	int channel;
+	int ID;
 };
 
 struct ERWord
@@ -3253,6 +3254,28 @@ typedef set<Ptr<ERChar>, ptrstat_x_cmp> ERChar_set;
 //
 //}
 
+bool compareERChar_sets(ERChar_set s1, ERChar_set s2)
+{
+	ERChar_set::iterator it1, it2;
+
+	it1 = s1.begin();
+	it2 = s2.begin();
+	while ( it1 != s1.end() && it2 != s2.end() )
+	{
+		//const ERChar* er1_ptr = (*it1)Ptr<ERChar>();
+		//const ERChar* er1_ptr = (*it1)(ERChar*());
+		//const ERChar* er2_ptr = (*it2)Ptr<ERChar>();
+		//if ( er1_ptr != er2_ptr)
+		if ( (*it1) != (*it2) )
+			return false;
+		it1++;
+		it2++;
+	}
+
+	return true;
+
+}
+
 void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 {
 	vector<Mat> masks;
@@ -3291,7 +3314,7 @@ void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set)
 
 	imshow("Regions", out);
 	cvMoveWindow("Regions", 200, 50);
-	waitKey();
+	waitKey(100);
 
 }	
 
@@ -3350,6 +3373,7 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	int COLS = img.cols;
 
 	ERChar_set er_all;
+	int count = 0;
 	for (int i=0; i<(int)regions.size(); i++)
 	{
 		for (int j=0; j<(int)regions[i].size(); j++)
@@ -3357,7 +3381,9 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 			Ptr<ERChar> erc = new ERChar();
 			erc->stat = regions[i][j];
 			erc->channel = i;
+			erc->ID = count;
 			er_all.insert(erc);
+			count++;
 		}
 	}
 
@@ -3371,38 +3397,123 @@ void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &region
 	vector<ERChar_set> words;
 
 	// Create pairwise words
-	ERChar_set::iterator it1, it2;
-	it1 = er_all.begin();
-	while ( it1 != er_all.end() ) 
 	{
-		if ((*it1)->stat.parent == NULL)
+		ERChar_set::iterator it1, it2;
+		it1 = er_all.begin();
+		while ( it1 != er_all.end() ) 
 		{
-			cout << "it1 null parent " << endl;
+			if ((*it1)->stat.parent == NULL)
+			{
+				cout << "it1 null parent " << endl;
+				it1++;
+			}
+			it2 = it1;
+			it2++;
+
+			ERChar_set pair;
+			while ( it2 != er_all.end() )
+			{
+				Ptr<ERChar> er1 = *it1;
+				Ptr<ERChar> er2 = *it2;
+				if ( v1(er1, er2) )
+				{
+					pair.insert(er1);
+					pair.insert(er2);
+					words.push_back(pair);
+				}
+				pair.clear();
+				it2++;
+			}
 			it1++;
 		}
-		it2 = it1;
-		it2++;
-
-		ERChar_set pair;
-		while ( it2 != er_all.end() )
-		{
-			Ptr<ERChar> er1 = *it1;
-			Ptr<ERChar> er2 = *it2;
-			if ( v1(er1, er2) )
-			{
-				pair.insert(er1);
-				pair.insert(er2);
-				erShow(ROWS, COLS, channels, pair);
-			}
-			pair.clear();
-			it2++;
-		}
-		it1++;
 	}
+	
+	for (int i=0; i<(int)words.size(); i++)
+		erShow(ROWS, COLS, channels, words[i]);
+
+
+	// Create length three words
+	vector<ERChar_set>::iterator it1, it2;
+ 	it1	= words.begin();	
+	for (it1 = words.begin(); it1 != words.end(); it1++ )
+	{
+		// Word or subword at it1
+		ERChar_set er_set1 = *it1;
+			
+		// First letter of word or subword at it1
+		Ptr<ERChar> subset_1;
+		subset_1 = (*er_set1.begin());
+
+		// Generate the subword from n=2,...,N at it1
+		ERChar_set subset_2N;
+		ERChar_set::iterator it_mid_1;
+		it_mid_1 = er_set1.begin();
+		it_mid_1++;
+		for ( ; it_mid_1 != er_set1.end(); it_mid_1++)	
+		{
+			subset_2N.insert(*it_mid_1);
+		}
+
+		//cout << "subset is size " << subset_2N.size() << endl;
+		//waitKey();
+
+		// New word or subword to be added	
+		ERChar_set subset_1N;
+		for (it2 = it1; it2 != words.end(); it2++ )
+		{
+			// Word or subword at it2
+			ERChar_set er_set2 = *it2;
+
+			// Generate subword from n=1,...,N-1 at it2
+			ERChar_set subset_1N1;
+			ERChar_set::iterator it_mid_2, it_end_2;
+			it_mid_2 = er_set2.begin();
+			it_end_2 = er_set2.end();
+			it_end_2--; //Stopping point at N-2
+			for ( ; it_mid_2 != it_end_2; it_mid_2++)
+			{
+				subset_1N1.insert(*it_mid_2);
+			}
+
+			// Compare to word at it2 which should be length N-1
+			CV_Assert( subset_2N.size() == subset_1N1.size() );
+
+			// Last letter of word of subword at it2
+			Ptr<ERChar> subset_N;
+			ERChar_set::iterator it_last_2 = er_set2.end();
+			it_last_2--;
+			subset_N = (*it_last_2);
+
+			if ( compareERChar_sets(subset_2N, subset_1N1) )
+			{
+				// Insert the first letter from it1
+				subset_1N.insert(subset_1);
+				
+				// Insert all the letters from the overlap of it1 and it2 (length N-1)
+				ERChar_set::iterator it_mid;
+				it_mid = subset_1N1.begin();
+				for ( ; it_mid != subset_1N1.end(); it_mid++)
+					subset_1N.insert(*it_mid);
+
+				// Insert the last letter from it2
+				subset_1N.insert(subset_N);
+
+
+				erShow(ROWS, COLS, channels, subset_1N);
+				
+
+			}
+
+			subset_1N.clear();
+			
+
+	
+		}
+	} 
 
 }
 
-}
+} //namespace cv
 
 
 
