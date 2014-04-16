@@ -3173,6 +3173,7 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
 
 const double DIST_MAX_RATIO = 3;
 const double DIST_MIN_RATIO = 0.5;
+const double HEIGHT_RATIO = 2;
 
 struct ERChar
 {
@@ -3251,11 +3252,12 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 	Rect& r1 = er1->stat.rect;
 	Rect& r2 = er2->stat.rect;
 
+	// Compare centroid distances
 	double w_max;
 	if (r1.width > r2.width)
 		w_max = r1.width;
 	else
-		w_max = r2.height;
+		w_max = r2.width;
 
 	Point c1;
 	c1.x = r1.x + (r1.width/2);
@@ -3268,8 +3270,17 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 	double d = norm(c2-c1);
 	if (d > w_max*DIST_MAX_RATIO || d < w_max/DIST_MIN_RATIO)
 		return false;
-	else
-		return true;
+
+
+	// Compare heights
+	double h1 = r1.height;
+	double h2 = r2.height;
+
+	if (h1/h2 > HEIGHT_RATIO || h2/h1 > HEIGHT_RATIO)
+		return false;
+
+
+	return true;
 }
 
 void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions)
