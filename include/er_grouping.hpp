@@ -34,7 +34,7 @@
 */
 
 
-void erGrouping(cv::InputArrayOfArrays src, std::vector<std::vector<cv::ERStat> > &regions,
+void erGrouping(cv::InputArrayOfArrays src, std::vector<std::vector<er::ERStat> > &regions,
                 const std::string& filename, float minProbablity, std::vector<cv::Rect> &groups);
 
 #endif

@@ -10,6 +10,7 @@
 #define RELATIVE_ERROR_FACTOR 100.0
 
 using namespace cv;
+using namespace er;
 using namespace std;
 
 // Compare doubles by relative error.

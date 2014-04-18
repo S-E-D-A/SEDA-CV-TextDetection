@@ -1,5 +1,7 @@
 #include "recognize_text.hpp"
 
+using namespace er;
+
 namespace recognize_text
 {
 
