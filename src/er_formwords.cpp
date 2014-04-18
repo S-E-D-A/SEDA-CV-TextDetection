@@ -17,32 +17,7 @@ const double MS_DELAY = 50;
 const int MIN_WORD_LENGTH = 4;
 
 
-//struct stat_x_cmp 
-//{
-//	bool operator() (const ERStat erc1, const ERStat erc2)
-//	{
-//		return (erc1.rect.tl().x < erc2.rect.tl().x);
-//	}
-//};
-
-// Set of ERs. Sorted by x position of top-left corner of bounding box
-//typedef set<ERStat, stat_x_cmp> ERset;
 typedef set<ERStat> ERset;
-
-//struct ERWord
-//{
-//	vector<ERStat> letters;
-//};
-
-//bool sortByChannel(ERChar erc1, ERChar erc2)
-//{
-//	return (erc1.channel > erc2.channel);
-//}
-//bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
-//{
-//		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
-//}
-
 
 //bool isParentChild_helper(ERStat* node, ERStat* compare, bool look_up)
 //{
@@ -66,7 +41,7 @@ typedef set<ERStat> ERset;
 //	return false;
 //
 //}
-//
+
 //bool isParentChild(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
 //{
 //	// Must be formed from same channel to be paren-child
@@ -290,7 +265,7 @@ bool v1(const ERStat& er1, const ERStat& er2)
 		return false;
 
 
-	// Compare angle between centroids
+	// Compare angle between centroids TODO: use moment[0] not center of BB
 	Point diag = c2 - c1;
 	double deg = asin(diag.y / norm(diag)) * 180.0 / PI;
 
@@ -373,23 +348,28 @@ void pruneSubwords(vector<list<ERset> > &words)
 	}
 }
 
-void erFormWords(vector<vector<ERStat> > &regions)
+// begin: iterator at FIRST er in subword
+// end:		iterator at LAST+1 er in subword
+ERset getSubWord(ERset::iterator begin, unsigned int length)
+{
+	ERset subword;
+	//ERset::iterator stop = ++end;
+	//while ( begin != stop )
+	for (unsigned int i=0; i<length; i++)
+	{
+		subword.insert(*begin);
+		begin++;
+	}
+	return subword;
+}
+
+void erFormWords(set<ERStat> &regions)
 {
 
 	CV_Assert( !regions.empty() );
 
-	ERset er_all;
-	for (int i=0; i<(int)regions.size(); i++)
-	{
-		for (int j=0; j<(int)regions[i].size(); j++)
-		{
-			//Ptr<ERStat> er = new
-			er_all.insert(regions[i][j]);
-		}
-	}
-
 	// Show all regions
-	erShow(er_all, 0);
+	erShow(regions, 0);
 
 	vector<list<ERset> > words;
 	// Vector of list of sets to store candidate words
@@ -400,12 +380,15 @@ void erFormWords(vector<vector<ERStat> > &regions)
 	//																 
 	// Inner list:	words or subwords of that length
 
-	list<ERset> words_of_length;
-	// Create pairwise words
+
+	// --- Create ER sequences of length 2 ---
+	//
+	//		Runtime: O(n^2)?, n is number of ERs
+	list<ERset> all_pairs;
 	{
 		ERset::iterator it1, it2;
-		it1 = er_all.begin();
-		while ( it1 != er_all.end() ) 
+		it1 = regions.begin();
+		while ( it1 != regions.end() ) 
 		{
 			if ((*it1).parent == NULL)
 			{
@@ -416,7 +399,7 @@ void erFormWords(vector<vector<ERStat> > &regions)
 			it2++;
 
 			ERset pair;
-			while ( it2 != er_all.end() )
+			while ( it2 != regions.end() )
 			{
 				ERStat er1 = *it1;
 				ERStat er2 = *it2;
@@ -424,7 +407,7 @@ void erFormWords(vector<vector<ERStat> > &regions)
 				{
 					pair.insert(er1);
 					pair.insert(er2);
-					words_of_length.push_back(pair);
+					all_pairs.push_back(pair);
 				}
 				pair.clear();
 				it2++;
@@ -432,93 +415,82 @@ void erFormWords(vector<vector<ERStat> > &regions)
 			it1++;
 		}
 	}
-	words.push_back(words_of_length);
-	words_of_length.clear();
+	words.push_back(all_pairs);
+	all_pairs.clear();
 	
-
-	// Create words of length N > 2
-	for (int d = 1; !words[d-1].empty(); d++ )
+	// --- Create ER sequences of length 3 ---
+	list<ERset> all_words_of_length;
+	for (int d = 0; !words[d].empty() && d < 7; d++ )
 	{
 		list<ERset>::iterator it1, it2;
-		it1	= words[d-1].begin();	
-		for (it1 = words[d-1].begin(); it1 != words[d-1].end(); it1++ )
+		it1	= words[d].begin();	
+		for (it1 = words[d].begin(); it1 != words[d].end(); it1++ )
 		{
-			// Word or subword at it1
+			// Entire word or subword at it1
+			// e.g.		ABCDE
 			ERset er_set1 = *it1;
 				
 			// First letter of word or subword at it1
-			ERStat subset_1 = (*er_set1.begin());
+			// e.g.		A
+			ERStat first_letter = *getSubWord(er_set1.begin(), 1).begin();
 
-			// Generate the subword from n=2,...,N at it1
-			ERset subset_2N;
-			ERset::iterator it_mid_1;
-			it_mid_1 = er_set1.begin();
-			it_mid_1++;
-			for ( ; it_mid_1 != er_set1.end(); it_mid_1++)	
-			{
-				subset_2N.insert(*it_mid_1);
-			}
-
+			// Generate the subword from n = 2, ..., N at it1
+			// e.g.		BCDE
+			ERset::iterator mid = er_set1.begin();
+			ERset middle_letters_2_N = getSubWord(++mid, er_set1.size()-1);
+	
 			// New word or subword to be added	
+			// e.g. ABCDEF (empty for now)
 			ERset subset_1N;
-			for (it2 = it1; it2 != words[d-1].end(); it2++ )
+			for (it2 = it1; it2 != words[d].end(); it2++ )
 			{
 				// Word or subword at it2
+				// e.g. BCDEF
 				ERset er_set2 = *it2;
 
 				// Generate subword from n=1,...,N-1 at it2
-				ERset subset_1N1;
-				ERset::iterator it_mid_2, it_end_2;
-				it_mid_2 = er_set2.begin();
-				it_end_2 = er_set2.end();
-				it_end_2--; //Stopping point at N-2
-				for ( ; it_mid_2 != it_end_2; it_mid_2++)
-				{
-					subset_1N1.insert(*it_mid_2);
-				}
+				// e.g. BCDE
+				ERset middle_letters_1_N1 = getSubWord(er_set2.begin(), er_set2.size()-1);
 
 				// Compare to word at it2 which should be length N-1
-				CV_Assert( subset_2N.size() == subset_1N1.size() );
+				CV_Assert( middle_letters_2_N.size() == middle_letters_1_N1.size() );
 
 				// Last letter of word of subword at it2
+				// e.g. F
 				ERStat subset_N;
 				ERset::iterator it_last_2 = er_set2.end();
 				it_last_2--;
 				subset_N = (*it_last_2);
 
-				if ( compareERStat_sets(subset_2N, subset_1N1) )
+				if ( compareERStat_sets(middle_letters_2_N, middle_letters_1_N1) )
 				{
 					// Insert the first letter from it1
-					subset_1N.insert(subset_1);
+					// e.g. A
+					subset_1N.insert(first_letter);
 					
 					// Insert all the letters from the overlap of it1 and it2 (length N-1)
+					// e.g. BCDE
 					ERset::iterator it_mid;
-					it_mid = subset_1N1.begin();
-					for ( ; it_mid != subset_1N1.end(); it_mid++)
+					it_mid = middle_letters_1_N1.begin();
+					for ( ; it_mid != middle_letters_1_N1.end(); it_mid++)
 						subset_1N.insert(*it_mid);
 
 					// Insert the last letter from it2
+					// eg. F
 					subset_1N.insert(subset_N);
 
-
-					words_of_length.push_back(subset_1N);
+					all_words_of_length.push_back(subset_1N);
 				}
 				subset_1N.clear();
 			}
 		}
 
-		words.push_back(words_of_length);
-		words_of_length.clear();
+		words.push_back(all_words_of_length);
+		all_words_of_length.clear();
 
-
-		cout << "Just finished words of length " << d+1 << endl;
+		cout << "Finished words of length " << d+1 << endl;
 		
 	}
-
-	// Show all ERs
-	//for (int d=0; d<(int)words.size(); d++)
-	//		for (int s=0; s<(int)words[d].size(); s++)
-	//			erShow(words[d][s], MS_DELAY);
 
 	// Prune subwords from words
 	pruneSubwords(words);
@@ -528,9 +500,9 @@ void erFormWords(vector<vector<ERStat> > &regions)
 	{
 		list<ERset>::iterator s;
 		for (s=words[d].begin(); s != words[d].end(); s++)
-			erShow((*s), 0);
+			erShow((*s), 10);
 	}
 
 }
 
-} //end namespace er
+} //namespace er

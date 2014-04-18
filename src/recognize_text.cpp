@@ -36,21 +36,15 @@ namespace recognize_text
 			er_filter2->run(channels[c], regions[c]);
 		}
 
-		// draw components
-		Mat display_im = src.clone();
-		//for (int c=0; c<(int)channels.size(); c++)
-		//{
-		//	src = display_im.clone();
-		//	components_draw(src, regions[0]);
-		//	imshow("components", src);
-		//	waitKey();
-		//}
 		
-		vector<vector<ERStat> > words;
-		erFormWords(regions);
+		set<ERStat> all_regions;
+		for (int i=0; i<(int)regions.size(); i++)
+			for (int j=0; j<(int)regions[i].size(); j++)
+				all_regions.insert(regions[i][j]);
+
+		erFormWords(all_regions);
 
 		cout << "Done!" << endl << endl;
-		cout << "Press 'e' to show the extracted Extremal Regions, any other key to exit." << endl << endl;
 		if( waitKey (-1) == 101)
 			er_show(channels,regions);
 

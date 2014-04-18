@@ -17,7 +17,7 @@
 namespace er
 {
 
-void erFormWords(std::vector<std::vector<er::ERStat> > &regions);
+void erFormWords(std::set<er::ERStat> &regions);
 
 }
 
