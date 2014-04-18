@@ -44,81 +44,18 @@
 #ifndef __OPENCV_OBJDETECT_ERFILTER_HPP__
 #define __OPENCV_OBJDETECT_ERFILTER_HPP__
 
-//#include "opencv2/imgproc.hpp"
-
+#include "er.hpp"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/ml/ml.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp> //TODO: remove
 #include <vector>
-#include <list>
 #include <deque>
 #include <string>
-#include <algorithm>
-#include <unordered_map>
-#include <set>
-#include <cmath>
 
-namespace cv
+namespace er
 {
-
-/*!
-    Extremal Region Stat structure
-
-    The ERStat structure represents a class-specific Extremal Region (ER).
-
-    An ER is a 4-connected set of pixels with all its grey-level values smaller than the values
-    in its outer boundary. A class-specific ER is selected (using a classifier) from all the ER's
-    in the component tree of the image.
-*/
-struct ERStat
-{
-public:
-    //! Constructor
-    explicit ERStat(int level = 256, int pixel = 0, int x = 0, int y = 0);
-    //! Destructor
-    ~ERStat() { }
-
-    //! seed point and the threshold (max grey-level value)
-    int pixel;
-    int level;
-
-    //! incrementally computable features
-    int area;
-    int perimeter;
-    int euler;                 //!< euler number
-    Rect rect;
-    double raw_moments[2];     //!< order 1 raw moments to derive the centroid
-    double central_moments[3]; //!< order 2 central moments to construct the covariance matrix
-    std::deque<int> *crossings;//!< horizontal crossings
-    float med_crossings;       //!< median of the crossings at three different height levels
-
-    //! 2nd stage features
-    float hole_area_ratio;
-    float convex_hull_ratio;
-    float num_inflexion_points;
-
-    // TODO Other features can be added (average color, standard deviation, and such)
-
-
-    // TODO shall we include the pixel list whenever available (i.e. after 2nd stage) ?
-    std::vector<int> *pixels;
-
-    //! probability that the ER belongs to the class we are looking for
-    double probability;
-
-    //! pointers preserving the tree structure of the component tree
-    ERStat* parent;
-    ERStat* child;
-    ERStat* next;
-    ERStat* prev;
-
-    //! wenever the regions is a local maxima of the probability
-    bool local_maxima;
-    ERStat* max_probability_ancestor;
-    ERStat* min_probability_ancestor;
-};
 
 /*!
     Base class for 1st and 2nd stages of Neumann and Matas scene text detection algorithms
@@ -146,11 +83,11 @@ public:
         \param image   is the input image
         \param regions is output for the first stage, input/output for the second one.
     */
-    virtual void run( InputArray image, std::vector<ERStat>& regions ) = 0;
+    virtual void run( cv::InputArray image, std::vector<ERStat>& regions ) = 0;
 
 
     //! set/get methods to set the algorithm properties,
-    virtual void setCallback(const Ptr<ERFilter::Callback>& cb) = 0;
+    virtual void setCallback(const cv::Ptr<ERFilter::Callback>& cb) = 0;
     virtual void setThresholdDelta(int thresholdDelta) = 0;
     virtual void setMinArea(float minArea) = 0;
     virtual void setMaxArea(float maxArea) = 0;
@@ -185,7 +122,7 @@ public:
     \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb,
+cv::Ptr<ERFilter> createERFilterNM1(const cv::Ptr<ERFilter::Callback>& cb,
                                                   int thresholdDelta = 1, float minArea = 0.00025,
                                                   float maxArea = 0.13, float minProbability = 0.4,
                                                   bool nonMaxSuppression = true,
@@ -205,7 +142,7 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb,
                            from file in samples/cpp/trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
-Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
+cv::Ptr<ERFilter> createERFilterNM2(const cv::Ptr<ERFilter::Callback>& cb,
                                                   float minProbability = 0.3);
 
 
@@ -214,67 +151,14 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
     The function takes as parameter the XML or YAML file with the classifier model
     (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
 */
-
-Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename);
+cv::Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename);
 
 /*!
     Allow to implicitly load the default classifier when creating an ERFilter object.
     The function takes as parameter the XML or YAML file with the classifier model
     (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
 */
-
-Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename);
-
-
-// computeNMChannels operation modes
-enum { ERFILTER_NM_RGBLGrad = 0,
-       ERFILTER_NM_IHSGrad  = 1
-     };
-
-/*!
-    Compute the different channels to be processed independently in the N&M algorithm
-    Neumann L., Matas J.: Real-Time Scene Text Localization and Recognition, CVPR 2012
-
-    In N&M algorithm, the combination of intensity (I), hue (H), saturation (S), and gradient
-    magnitude channels (Grad) are used in order to obtain high localization recall.
-    This implementation also provides an alternative combination of red (R), green (G), blue (B),
-    lightness (L), and gradient magnitude (Grad).
-
-    \param  _src           Source image. Must be RGB CV_8UC3.
-    \param  _channels      Output vector<Mat> where computed channels are stored.
-    \param  _mode          Mode of operation. Currently the only available options are
-                           ERFILTER_NM_RGBLGrad (by default) and ERFILTER_NM_IHSGrad.
-
-*/
-void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode = ERFILTER_NM_RGBLGrad);
-
-
-/*!
-    Find groups of Extremal Regions that are organized as text blocks. This function implements
-    the grouping algorithm described in:
-    Gomez L. and Karatzas D.: Multi-script Text Extraction from Natural Scenes, ICDAR 2013.
-    Notice that this implementation constrains the results to horizontally-aligned text and
-    latin script (since ERFilter classifiers are trained only for latin script detection).
-
-    The algorithm combines two different clustering techniques in a single parameter-free procedure
-    to detect groups of regions organized as text. The maximally meaningful groups are fist detected
-    in several feature spaces, where each feature space is a combination of proximity information
-    (x,y coordinates) and a similarity measure (intensity, color, size, gradient magnitude, etc.),
-    thus providing a set of hypotheses of text groups. Evidence Accumulation framework is used to
-    combine all these hypotheses to get the final estimate. Each of the resulting groups are finally
-    validated using a classifier in order to assest if they form a valid horizontally-aligned text block.
-
-    \param  src            Vector of sinle channel images CV_8UC1 from wich the regions were extracted.
-    \param  regions        Vector of ER's retreived from the ERFilter algorithm from each channel
-    \param  filename       The XML or YAML file with the classifier model (e.g. trained_classifier_erGrouping.xml)
-    \param  minProbability The minimum probability for accepting a group
-    \param  groups         The output of the algorithm are stored in this parameter as list of rectangles.
-*/
-
-void erGrouping(InputArrayOfArrays src, std::vector<std::vector<ERStat> > &regions,
-                                                   const std::string& filename, float minProbablity,
-                                                   std::vector<Rect > &groups);
-void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions);
+cv::Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename);
 
 }
 #endif // _OPENCV_ERFILTER_HPP_
