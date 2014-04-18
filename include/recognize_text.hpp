@@ -1,4 +1,5 @@
-#ifndef RECOGNIZE_TEXT_H
+#ifndef __RECOGNIZE_TEXT_H
+#define __RECOGNIZE_TEXT_H
 
 #include <vector>
 #include <iostream>
