@@ -27,6 +27,9 @@ namespace er
 			//! Destructor
 			~ERStat() { }
 
+			// Comparison operator
+			bool operator== (ERStat &er);
+
 			// pointer to scalar image channel from which the connected-component was formed
 			cv::Ptr<cv::Mat> im_ptr;
 
@@ -69,6 +72,22 @@ namespace er
 			ERStat* max_probability_ancestor;
 			ERStat* min_probability_ancestor;
 	};
+
+	inline bool operator==(const ERStat& lhs, const ERStat& rhs)
+	{ 
+		// True if seed pixel, threshold level, and underlying channel are equal
+		return ((lhs.pixel == rhs.pixel) && (lhs.level == rhs.level) 
+				&& (lhs.im_ptr->data == rhs.im_ptr->data));
+	}
+	inline bool operator!=(const ERStat& lhs, const ERStat& rhs){return !operator==(lhs,rhs);}
+	inline bool operator< (const ERStat& lhs, const ERStat& rhs)
+	{
+		// Sort by x position of top-left corner bounding box
+		return (lhs.rect.tl().x < rhs.rect.tl().x);
+	}
+	inline bool operator> (const ERStat& lhs, const ERStat& rhs){return  operator< (rhs,lhs);}
+	inline bool operator<=(const ERStat& lhs, const ERStat& rhs){return !operator> (lhs,rhs);}
+	inline bool operator>=(const ERStat& lhs, const ERStat& rhs){return !operator< (lhs,rhs);}
 
 	// computeNMChannels operation modes
 	enum 
