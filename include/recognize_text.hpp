@@ -8,7 +8,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
 
-#include "erfilter.hpp"
+#include "er_filter.hpp"
 
 
 using namespace cv;

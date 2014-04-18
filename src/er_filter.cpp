@@ -42,7 +42,7 @@
 
 //#include "precomp.hpp"
 
-#include "erfilter.hpp"
+#include "er_filter.hpp"
 #include <fstream>
 
 #if defined _MSC_VER && _MSC_VER == 1500
