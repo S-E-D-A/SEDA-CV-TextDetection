@@ -10,6 +10,7 @@
 #include "opencv2/objdetect/objdetect.hpp"
 
 #include "er_filter.hpp"
+#include "er_formwords.hpp"
 
 
 using namespace cv;

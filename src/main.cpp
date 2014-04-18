@@ -18,9 +18,6 @@
 using namespace cv;
 using namespace std;
 
-void groups_draw(Mat &src, vector<Rect> &groups);
-void er_show(vector<Mat> &channels, vector<vector<ERStat> > &regions);
-
 int main(int argc, char ** argv) {
   /* Handles input otpions */
   /* ##################### */

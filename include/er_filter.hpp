@@ -51,17 +51,10 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp> //TODO: remove
 #include <vector>
-#include <list>
 #include <deque>
 #include <string>
-#include <algorithm>
-#include <unordered_map>
-#include <set>
-#include <cmath>
 
-using namespace er;
-
-namespace cv
+namespace er
 {
 
 /*!
@@ -90,11 +83,11 @@ public:
         \param image   is the input image
         \param regions is output for the first stage, input/output for the second one.
     */
-    virtual void run( InputArray image, std::vector<ERStat>& regions ) = 0;
+    virtual void run( cv::InputArray image, std::vector<ERStat>& regions ) = 0;
 
 
     //! set/get methods to set the algorithm properties,
-    virtual void setCallback(const Ptr<ERFilter::Callback>& cb) = 0;
+    virtual void setCallback(const cv::Ptr<ERFilter::Callback>& cb) = 0;
     virtual void setThresholdDelta(int thresholdDelta) = 0;
     virtual void setMinArea(float minArea) = 0;
     virtual void setMaxArea(float maxArea) = 0;
@@ -129,7 +122,7 @@ public:
     \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb,
+cv::Ptr<ERFilter> createERFilterNM1(const cv::Ptr<ERFilter::Callback>& cb,
                                                   int thresholdDelta = 1, float minArea = 0.00025,
                                                   float maxArea = 0.13, float minProbability = 0.4,
                                                   bool nonMaxSuppression = true,
@@ -149,7 +142,7 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb,
                            from file in samples/cpp/trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
-Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
+cv::Ptr<ERFilter> createERFilterNM2(const cv::Ptr<ERFilter::Callback>& cb,
                                                   float minProbability = 0.3);
 
 
@@ -158,16 +151,14 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
     The function takes as parameter the XML or YAML file with the classifier model
     (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
 */
-Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename);
+cv::Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename);
 
 /*!
     Allow to implicitly load the default classifier when creating an ERFilter object.
     The function takes as parameter the XML or YAML file with the classifier model
     (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
 */
-Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename);
-
-void erWordLine(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions);
+cv::Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename);
 
 }
 #endif // _OPENCV_ERFILTER_HPP_
