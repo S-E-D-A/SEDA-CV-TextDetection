@@ -47,7 +47,7 @@ namespace recognize_text
 		//}
 		
 		vector<vector<ERStat> > words;
-		erFormWords(display_im, channels, regions);
+		erFormWords(regions);
 
 		cout << "Done!" << endl << endl;
 		cout << "Press 'e' to show the extracted Extremal Regions, any other key to exit." << endl << endl;

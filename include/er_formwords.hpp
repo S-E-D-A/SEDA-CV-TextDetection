@@ -17,7 +17,7 @@
 namespace er
 {
 
-void erFormWords(cv::Mat &img, std::vector<cv::Mat> &channels, std::vector<std::vector<er::ERStat> > &regions);
+void erFormWords(std::vector<std::vector<er::ERStat> > &regions);
 
 }
 

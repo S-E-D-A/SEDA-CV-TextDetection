@@ -14,21 +14,21 @@ namespace er
     in its outer boundary. A class-specific ER is selected (using a classifier) from all the ER's
     in the component tree of the image.
 	*/
-	ERStat::ERStat(int init_level, int init_pixel, int init_x, int init_y) : pixel(init_pixel),
-								 level(init_level), area(0), perimeter(0), euler(0), probability(1.0),
-								 parent(0), child(0), next(0), prev(0), local_maxima(0),
+	ERStat::ERStat(Mat im, int init_level, int init_pixel, int init_x, int init_y) : 
+							   pixel(init_pixel),level(init_level), area(0), perimeter(0), euler(0), 
+								 probability(1.0), parent(0), child(0), next(0), prev(0), local_maxima(0), 
 								 max_probability_ancestor(0), min_probability_ancestor(0)
 	{
+			im_ptr = new Mat(im);
 			rect = Rect(init_x,init_y,1,1);
 			raw_moments[0] = 0.0;
 			raw_moments[1] = 0.0;
 			central_moments[0] = 0.0;
 			central_moments[1] = 0.0;
 			central_moments[2] = 0.0;
-			crossings = new std::deque<int>();
+			crossings = new deque<int>();
 			crossings->push_back(0);
 	}
-
 
 	/* ------------------------------------------------------------------------------------*/
 	/* -------------------------------- Compute Channels NM -------------------------------*/

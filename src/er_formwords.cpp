@@ -20,8 +20,18 @@ struct ERChar
 {
 	ERStat stat;
 	int channel;
-	int ID;
 };
+
+struct ptrstat_x_cmp 
+{
+	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
+	{
+		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
+	}
+};
+
+// Set of ERs. Sorted by x position of top-left corner of bounding box
+typedef set<Ptr<ERChar>, ptrstat_x_cmp> ERset;
 
 struct ERWord
 {
@@ -32,20 +42,11 @@ struct ERWord
 //{
 //	return (erc1.channel > erc2.channel);
 //}
-struct ptrstat_x_cmp 
-{
-	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
-	{
-		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
-	}
-};
-
 bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
 {
 		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
 }
 
-typedef set<Ptr<ERChar>, ptrstat_x_cmp> ERChar_set;
 
 //bool isParentChild_helper(ERStat* node, ERStat* compare, bool look_up)
 //{
@@ -92,9 +93,9 @@ typedef set<Ptr<ERChar>, ptrstat_x_cmp> ERChar_set;
 //
 //}
 
-bool compareERChar_sets(ERChar_set s1, ERChar_set s2)
+bool compareERChar_sets(ERset s1, ERset s2)
 {
-	ERChar_set::iterator it1, it2;
+	ERset::iterator it1, it2;
 
 	it1 = s1.begin();
 	it2 = s2.begin();
@@ -220,30 +221,30 @@ bool compareERChar_sets(ERChar_set s1, ERChar_set s2)
 //	return out;
 //}
 
-void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set, double delay)
+void erShow(ERset &er_set, double delay)
 {
-	vector<Mat> masks;
-	for (int c=0; c<(int)channels.size(); c++)
-	{
-		Mat blank = Mat::zeros(channels[c].rows+2,channels[0].cols+2,CV_8UC1);
-		masks.push_back(blank);
-	}
+
+	// Increment er_set iterator to first non-root ER, since the root ER may be a dummy ER
+	ERset::iterator it = er_set.begin();
+
+	// Grab the first ER and use its image pointer to initialize the size of a
+	// zeros image which will be used to display all the ERs in er_set
+	Mat mask = Mat::zeros((*it)->stat.im_ptr->rows+2, (*it)->stat.im_ptr->cols+2, CV_8UC1);
 
 	//vector<Point> pts;
 	//Point leftmost, rightmost;
 	//leftmost.x = cols;
 	//rightmost.x = 0;
-	ERChar_set::iterator it;
-	for (it = er_set.begin(); it != er_set.end(); it++)
+	for ( ; it != er_set.end(); it++)
 	{
 		ERStat er = (*it)->stat;
-		int c = (*it)->channel;
+		//int c = (*it)->channel;
 		if (er.parent != NULL)
 		{
 			int newmaskval = 255;
 			int flags = 4 + (newmaskval << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
-			floodFill(channels[c],masks[c],Point(er.pixel%channels[c].cols,
-						er.pixel/channels[c].cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
+			Mat im = (*er.im_ptr);
+			floodFill(im,mask,Point(er.pixel%im.cols, er.pixel/im.cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
 			Point BR = er.rect.br();
 			BR.x = BR.x + 1; BR.y = BR.y + 1; //To account for mask size difference
 			//circle(masks[c], BR, 5, Scalar(255));
@@ -260,21 +261,7 @@ void erShow(int rows, int cols, vector<Mat> &channels, ERChar_set &er_set, doubl
 	//rightmost.y = lineParams.x + lineParams.y*rightmost.x;
 	//line(masks[0], leftmost, rightmost, Scalar(255), 2);
 
-
-	Mat out = Mat::zeros(rows, cols, CV_8UC3);
-	vector<Mat> clr_channels;
-	split(out, clr_channels);
-	for (int c=0; c<(int)channels.size(); c++)
-	{
-		Mat disp(masks[c], Range(1, masks[c].rows-1), Range(1, masks[c].cols-1));
-		if (c==0)
-			clr_channels[0] = clr_channels[0] + disp;
-		else
-			clr_channels[1] = clr_channels[1] + disp;
-		merge(clr_channels, out);
-	}
-
-	imshow("Regions", out);
+	imshow("Regions", mask);
 	cvMoveWindow("Regions", 200, 50);
 	waitKey(delay);
 
@@ -326,13 +313,13 @@ bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
 }
 
 // Assume s1 is shorter than s2
-bool isSubWord(ERChar_set s1, ERChar_set s2)
+bool isSubWord(ERset s1, ERset s2)
 {
 	if (s1.empty() || s2.empty())
 		return false;
 
-	ERChar_set::iterator it1 = s1.begin();
-	ERChar_set::iterator it2 = s2.begin();
+	ERset::iterator it1 = s1.begin();
+	ERset::iterator it2 = s2.begin();
 	
 	while ( it1 != s1.end() && it2 != s2.end() )
 	{
@@ -351,7 +338,7 @@ bool isSubWord(ERChar_set s1, ERChar_set s2)
 		return false;
 }
 
-void pruneSubwords(vector<list<ERChar_set> > &words)
+void pruneSubwords(vector<list<ERset> > &words)
 {
 
 	for (int d=0; d<(int)words.size(); d++)
@@ -364,17 +351,17 @@ void pruneSubwords(vector<list<ERChar_set> > &words)
 			continue;
 		}
 
-		list<ERChar_set>::iterator it1;
-		list<ERChar_set>::iterator it2;
+		list<ERset>::iterator it1;
+		list<ERset>::iterator it2;
 
 		bool erased = true;
 		for (it1 = words[d-1].begin(); it1 != words[d-1].end(); )
 		{
 
-			ERChar_set small = (*it1);
+			ERset small = (*it1);
 			for(it2 = words[d].begin(); it2 != words[d].end(); it2++)
 			{
-				ERChar_set big = (*it2);
+				ERset big = (*it2);
 				if ( isSubWord(small,big) )
 				{
 					it1 = words[d-1].erase(it1);
@@ -393,16 +380,12 @@ void pruneSubwords(vector<list<ERChar_set> > &words)
 
 }
 
-void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regions)
+void erFormWords(vector<vector<ERStat> > &regions)
 {
 
-	CV_Assert( !img.empty() );
 	CV_Assert( !regions.empty() );
 
-	int ROWS = img.rows;
-	int COLS = img.cols;
-
-	ERChar_set er_all;
+	ERset er_all;
 	int count = 0;
 	for (int i=0; i<(int)regions.size(); i++)
 	{
@@ -410,17 +393,15 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 		{
 			Ptr<ERChar> erc = new ERChar();
 			erc->stat = regions[i][j];
-			erc->channel = i;
-			erc->ID = count;
 			er_all.insert(erc);
 			count++;
 		}
 	}
 
 	// Show all regions
-	erShow(ROWS, COLS, channels, er_all, 0);
+	erShow(er_all, 0);
 
-	vector<list<ERChar_set> > words;
+	vector<list<ERset> > words;
 	// Vector of list of sets to store candidate words
 	// Outer vector:	determines length
 	// 								[0] all length 1 words or subwords
@@ -429,11 +410,10 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 	//																 
 	// Inner list:	words or subwords of that length
 
-	list<ERChar_set> words_of_length;
-
+	list<ERset> words_of_length;
 	// Create pairwise words
 	{
-		ERChar_set::iterator it1, it2;
+		ERset::iterator it1, it2;
 		it1 = er_all.begin();
 		while ( it1 != er_all.end() ) 
 		{
@@ -445,7 +425,7 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 			it2 = it1;
 			it2++;
 
-			ERChar_set pair;
+			ERset pair;
 			while ( it2 != er_all.end() )
 			{
 				Ptr<ERChar> er1 = *it1;
@@ -469,20 +449,20 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 	// Create words of length N > 2
 	for (int d = 1; !words[d-1].empty(); d++ )
 	{
-		list<ERChar_set>::iterator it1, it2;
+		list<ERset>::iterator it1, it2;
 		it1	= words[d-1].begin();	
 		for (it1 = words[d-1].begin(); it1 != words[d-1].end(); it1++ )
 		{
 			// Word or subword at it1
-			ERChar_set er_set1 = *it1;
+			ERset er_set1 = *it1;
 				
 			// First letter of word or subword at it1
 			Ptr<ERChar> subset_1;
 			subset_1 = (*er_set1.begin());
 
 			// Generate the subword from n=2,...,N at it1
-			ERChar_set subset_2N;
-			ERChar_set::iterator it_mid_1;
+			ERset subset_2N;
+			ERset::iterator it_mid_1;
 			it_mid_1 = er_set1.begin();
 			it_mid_1++;
 			for ( ; it_mid_1 != er_set1.end(); it_mid_1++)	
@@ -491,15 +471,15 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 			}
 
 			// New word or subword to be added	
-			ERChar_set subset_1N;
+			ERset subset_1N;
 			for (it2 = it1; it2 != words[d-1].end(); it2++ )
 			{
 				// Word or subword at it2
-				ERChar_set er_set2 = *it2;
+				ERset er_set2 = *it2;
 
 				// Generate subword from n=1,...,N-1 at it2
-				ERChar_set subset_1N1;
-				ERChar_set::iterator it_mid_2, it_end_2;
+				ERset subset_1N1;
+				ERset::iterator it_mid_2, it_end_2;
 				it_mid_2 = er_set2.begin();
 				it_end_2 = er_set2.end();
 				it_end_2--; //Stopping point at N-2
@@ -513,7 +493,7 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 
 				// Last letter of word of subword at it2
 				Ptr<ERChar> subset_N;
-				ERChar_set::iterator it_last_2 = er_set2.end();
+				ERset::iterator it_last_2 = er_set2.end();
 				it_last_2--;
 				subset_N = (*it_last_2);
 
@@ -523,7 +503,7 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 					subset_1N.insert(subset_1);
 					
 					// Insert all the letters from the overlap of it1 and it2 (length N-1)
-					ERChar_set::iterator it_mid;
+					ERset::iterator it_mid;
 					it_mid = subset_1N1.begin();
 					for ( ; it_mid != subset_1N1.end(); it_mid++)
 						subset_1N.insert(*it_mid);
@@ -549,7 +529,7 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 	// Show all ERs
 	//for (int d=0; d<(int)words.size(); d++)
 	//		for (int s=0; s<(int)words[d].size(); s++)
-	//			erShow(ROWS, COLS, channels, words[d][s], MS_DELAY);
+	//			erShow(words[d][s], MS_DELAY);
 
 	// Prune subwords from words
 	pruneSubwords(words);
@@ -557,9 +537,9 @@ void erFormWords(Mat &img, vector<Mat> &channels, vector<vector<ERStat> > &regio
 	// Show all ERs
 	for (int d=0; d<(int)words.size(); d++)
 	{
-		list<ERChar_set>::iterator s;
+		list<ERset>::iterator s;
 		for (s=words[d].begin(); s != words[d].end(); s++)
-			erShow(ROWS, COLS, channels, (*s), 0);
+			erShow((*s), 0);
 	}
 
 }

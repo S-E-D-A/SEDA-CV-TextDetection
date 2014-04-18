@@ -275,7 +275,7 @@ void ERFilterNM::er_tree_extract( InputArray image )
 
         // push a component with current level in the component stack
         if (push_new_component)
-            er_stack.push_back(new ERStat(current_level, current_pixel, x, y));
+            er_stack.push_back(new ERStat(src, current_level, current_pixel, x, y));
         push_new_component = false;
 
         // explore the (remaining) edges to the neighbors to the current pixel
@@ -516,7 +516,7 @@ void ERFilterNM::er_tree_extract( InputArray image )
 
                 if (new_level < er_stack.back()->level)
                 {
-                    er_stack.push_back(new ERStat(new_level, current_pixel, current_pixel%width, current_pixel/width));
+                    er_stack.push_back(new ERStat(src, new_level, current_pixel, current_pixel%width, current_pixel/width));
                     er_merge(er_stack.back(), er);
                     break;
                 }

@@ -23,9 +23,12 @@ namespace er
 	{
 	public:
 			//! Constructor
-			explicit ERStat(int level = 256, int pixel = 0, int x = 0, int y = 0);
+			explicit ERStat(cv::Mat im = cv::Mat(), int level = 256, int pixel = 0, int x = 0, int y = 0);
 			//! Destructor
 			~ERStat() { }
+
+			// pointer to scalar image channel from which the connected-component was formed
+			cv::Ptr<cv::Mat> im_ptr;
 
 			//! seed point and the threshold (max grey-level value)
 			int pixel;
