@@ -16,36 +16,32 @@ const double HORIZ_ANGLE = 20;
 const double MS_DELAY = 50;
 const int MIN_WORD_LENGTH = 4;
 
-struct ERChar
-{
-	ERStat stat;
-	int channel;
-};
 
-struct ptrstat_x_cmp 
-{
-	bool operator() (const Ptr<ERChar> erc1, const Ptr<ERChar> erc2)
-	{
-		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
-	}
-};
+//struct stat_x_cmp 
+//{
+//	bool operator() (const ERStat erc1, const ERStat erc2)
+//	{
+//		return (erc1.rect.tl().x < erc2.rect.tl().x);
+//	}
+//};
 
 // Set of ERs. Sorted by x position of top-left corner of bounding box
-typedef set<Ptr<ERChar>, ptrstat_x_cmp> ERset;
+//typedef set<ERStat, stat_x_cmp> ERset;
+typedef set<ERStat> ERset;
 
-struct ERWord
-{
-	vector<ERChar> letters;
-};
+//struct ERWord
+//{
+//	vector<ERStat> letters;
+//};
 
 //bool sortByChannel(ERChar erc1, ERChar erc2)
 //{
 //	return (erc1.channel > erc2.channel);
 //}
-bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
-{
-		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
-}
+//bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
+//{
+//		return (erc1->stat.rect.tl().x < erc2->stat.rect.tl().x);
+//}
 
 
 //bool isParentChild_helper(ERStat* node, ERStat* compare, bool look_up)
@@ -93,7 +89,7 @@ bool sortByX(Ptr<ERChar> erc1, Ptr<ERChar> erc2)
 //
 //}
 
-bool compareERChar_sets(ERset s1, ERset s2)
+bool compareERStat_sets(ERset s1, ERset s2)
 {
 	ERset::iterator it1, it2;
 
@@ -105,7 +101,7 @@ bool compareERChar_sets(ERset s1, ERset s2)
 		//const ERChar* er1_ptr = (*it1)(ERChar*());
 		//const ERChar* er2_ptr = (*it2)Ptr<ERChar>();
 		//if ( er1_ptr != er2_ptr)
-		if ( (*it1) != (*it2) )
+		if ( !((*it1) == (*it2)) )
 			return false;
 		it1++;
 		it2++;
@@ -229,7 +225,7 @@ void erShow(ERset &er_set, double delay)
 
 	// Grab the first ER and use its image pointer to initialize the size of a
 	// zeros image which will be used to display all the ERs in er_set
-	Mat mask = Mat::zeros((*it)->stat.im_ptr->rows+2, (*it)->stat.im_ptr->cols+2, CV_8UC1);
+	Mat mask = Mat::zeros((*it).im_ptr->rows+2, (*it).im_ptr->cols+2, CV_8UC1);
 
 	//vector<Point> pts;
 	//Point leftmost, rightmost;
@@ -237,7 +233,7 @@ void erShow(ERset &er_set, double delay)
 	//rightmost.x = 0;
 	for ( ; it != er_set.end(); it++)
 	{
-		ERStat er = (*it)->stat;
+		ERStat er = (*it);
 		//int c = (*it)->channel;
 		if (er.parent != NULL)
 		{
@@ -267,10 +263,10 @@ void erShow(ERset &er_set, double delay)
 
 }	
 
-bool v1(Ptr<ERChar> er1, Ptr<ERChar> er2)
+bool v1(const ERStat& er1, const ERStat& er2)
 {
-	Rect& r1 = er1->stat.rect;
-	Rect& r2 = er2->stat.rect;
+	const Rect& r1 = er1.rect;
+	const Rect& r2 = er2.rect;
 
 	// Compare centroid distances
 	double w_max;
@@ -374,10 +370,7 @@ void pruneSubwords(vector<list<ERset> > &words)
 				it1++;
 			erased = false;
 		}
-	
 	}
-
-
 }
 
 void erFormWords(vector<vector<ERStat> > &regions)
@@ -386,15 +379,12 @@ void erFormWords(vector<vector<ERStat> > &regions)
 	CV_Assert( !regions.empty() );
 
 	ERset er_all;
-	int count = 0;
 	for (int i=0; i<(int)regions.size(); i++)
 	{
 		for (int j=0; j<(int)regions[i].size(); j++)
 		{
-			Ptr<ERChar> erc = new ERChar();
-			erc->stat = regions[i][j];
-			er_all.insert(erc);
-			count++;
+			//Ptr<ERStat> er = new
+			er_all.insert(regions[i][j]);
 		}
 	}
 
@@ -417,7 +407,7 @@ void erFormWords(vector<vector<ERStat> > &regions)
 		it1 = er_all.begin();
 		while ( it1 != er_all.end() ) 
 		{
-			if ((*it1)->stat.parent == NULL)
+			if ((*it1).parent == NULL)
 			{
 				cout << "it1 null parent " << endl;
 				it1++;
@@ -428,8 +418,8 @@ void erFormWords(vector<vector<ERStat> > &regions)
 			ERset pair;
 			while ( it2 != er_all.end() )
 			{
-				Ptr<ERChar> er1 = *it1;
-				Ptr<ERChar> er2 = *it2;
+				ERStat er1 = *it1;
+				ERStat er2 = *it2;
 				if ( v1(er1, er2) )
 				{
 					pair.insert(er1);
@@ -457,8 +447,7 @@ void erFormWords(vector<vector<ERStat> > &regions)
 			ERset er_set1 = *it1;
 				
 			// First letter of word or subword at it1
-			Ptr<ERChar> subset_1;
-			subset_1 = (*er_set1.begin());
+			ERStat subset_1 = (*er_set1.begin());
 
 			// Generate the subword from n=2,...,N at it1
 			ERset subset_2N;
@@ -492,12 +481,12 @@ void erFormWords(vector<vector<ERStat> > &regions)
 				CV_Assert( subset_2N.size() == subset_1N1.size() );
 
 				// Last letter of word of subword at it2
-				Ptr<ERChar> subset_N;
+				ERStat subset_N;
 				ERset::iterator it_last_2 = er_set2.end();
 				it_last_2--;
 				subset_N = (*it_last_2);
 
-				if ( compareERChar_sets(subset_2N, subset_1N1) )
+				if ( compareERStat_sets(subset_2N, subset_1N1) )
 				{
 					// Insert the first letter from it1
 					subset_1N.insert(subset_1);
