@@ -82,7 +82,7 @@ bool compareERStat_sets(ERset s1, ERset s2)
 
 }
 
-void wlDraw(ERset &triplet, ERWordLine &wl)
+Mat wlDraw(ERset &triplet, ERWordLine &wl)
 {
 	// Draw the triplet
 	ERset::iterator it = triplet.begin();
@@ -111,10 +111,10 @@ void wlDraw(ERset &triplet, ERWordLine &wl)
 	{
 		switch (i)
 		{
-			case 0: b = wl.tau.t1; break;
-			case 1: b = wl.tau.t2; break;
-			case 2: b = wl.tau.b1; break;
-			default: b = wl.tau.b2; break;
+			case 0: b = wl.tau.t[0]; break;
+			case 1: b = wl.tau.t[1]; break;
+			case 2: b = wl.tau.b[0]; break;
+			default: b = wl.tau.b[1]; break;
 		}
 		Point p1 = Point(TL.x, (wl.tau.slope*TL.x)+b);
 		Point p2 = Point(TR.x, (wl.tau.slope*TR.x)+b);
@@ -122,18 +122,7 @@ void wlDraw(ERset &triplet, ERWordLine &wl)
 		line(mask, p1, p2, Scalar(255), 1 );
 	}
 
-	imshow("Word Lines", mask);
-	waitKey();
-
-}
-
-bool v3(ERset& triplet)
-{
-
-	//ERWordLine wl = ERWordLine(triplet);
-	//wlDraw(triplet, wl);
-	
-	return true;
+	return mask;
 
 }
 
@@ -165,11 +154,8 @@ void erShow(ERset &er_set, double delay)
 
 		}
 	}
-
 	imshow("Regions", mask);
 	cvMoveWindow("Regions", 200, 50);
-	waitKey(delay);
-
 }	
 
 
@@ -218,6 +204,83 @@ bool v1(const ERStat& er1, const ERStat& er2)
 
 	return true;
 }
+
+double wl_dist(ERWordLine& wl1, ERWordLine& wl2)
+{
+
+	wl_params& tau1 = wl1.tau;
+	wl_params& tau2 = wl2.tau;
+
+	double h = std::max(tau1.h, tau2.h);
+	double xL = std::min(tau1.x_min, tau2.x_min);
+	double xR = std::max(tau1.x_max, tau2.x_max);
+
+	double min_t = numeric_limits<double>::max();
+	double min_b = numeric_limits<double>::max();
+	for (int i=0; i<2; i++)
+	{
+		for (int j=0; j<2; j++)
+		{
+			double tdL = std::abs((tau1.slope*xL+tau1.t[i]) - (tau2.slope*xL+tau2.t[j]));
+			double tdR = std::abs((tau1.slope*xR+tau1.t[i]) - (tau2.slope*xR+tau2.t[j]));
+			double tdelta = (std::max(tdL, tdR) / h);
+
+			double bdL = std::abs((tau1.slope*xL+tau1.b[i]) - (tau2.slope*xL+tau2.b[j]));
+			double bdR = std::abs((tau1.slope*xR+tau1.b[i]) - (tau2.slope*xR+tau2.b[j]));
+			double bdelta = (std::max(bdL, bdR) / h);
+			
+			if (tdelta < min_t)
+				min_t = tdelta;
+
+			if (bdelta < min_b)
+				min_b = bdelta;
+		}
+	}
+	
+	return std::max(min_t, min_b);
+}
+
+bool v3(ERset& quad)
+{
+
+	// Form triplet1 and triplet2
+	ERset triplet1, triplet2;
+	ERset::iterator it = quad.begin();
+	//e.g. 	quad 			= ABCD
+	//			triplet1 	= ABC
+	//			triplet2  = BCD
+	
+	// A
+	triplet1.insert(*it++);
+
+	// B
+	triplet1.insert(*it);
+	triplet2.insert(*it++);
+
+	// C
+	triplet1.insert(*it);
+	triplet2.insert(*it++);
+
+	// D
+	triplet2.insert(*it);
+
+
+	ERWordLine wl1 = ERWordLine(triplet1);
+	ERWordLine wl2 = ERWordLine(triplet2);
+
+	Mat im1 = wlDraw(triplet1, wl1);
+	Mat im2 = wlDraw(triplet2, wl2);
+
+	imshow("word 1", im1);
+	imshow("word 2", im2);
+	double d = wl_dist(wl1, wl2);
+	cout << "Distance is " << d << endl;
+	waitKey();
+
+	return true;
+
+}
+
 
 // Assume s1 is shorter than s2
 bool isSubWord(ERset s1, ERset s2)
@@ -415,8 +478,11 @@ void erFormWords(set<ERStat> &regions)
 					// eg. F
 					subset_1N.insert(subset_N);
 
-					if (subset_1N.size() == 3)
-						v3(subset_1N);
+					if (subset_1N.size() == 4)
+					{
+						if ( ! v3(subset_1N) )
+							continue;
+					}
 
 					all_words_of_length.push_back(subset_1N);
 				}
