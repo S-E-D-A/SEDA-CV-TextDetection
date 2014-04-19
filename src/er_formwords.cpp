@@ -278,27 +278,19 @@ vector<pair<double,double> > estimateWordLines(ERset triplet)
 		bot_pts.push_back(b);
 	}
 
-	//pair<double,double> best;
+	// Use the bottom points to determine word line direction
 	double slope = LeastMedSquaresDirection(bot_pts);
 
-	pair<double,double> top_intercepts  = fitLines(top_pts, slope);
-	// Returns: t1 and t2
-	double t1 = top_intercepts.first;
-	double t2 = top_intercepts.second;
-
-	for (int i=0; i<top_pts.size(); i++)
-		cout << "top point " << i << " is (" << top_pts[i].x << ","<< top_pts[i].y <<")" << endl;
-
-	//cout << "intercept is " << top_intercepts.first << " " << top_intercepts.second << endl;
-	//lines.push_back( make_pair(a, top_intercepts.first) );
-	
-
-	//double b = top_pts[0].y - slope*top_pts[0].x;
-	//cout << "B IS " << b << endl;
+	// Using the word line direction, fit two distince lines to the
+	// remaining top and bottom lines to find the four line estimates
+	pair<double,double> top_intercepts = fitLines(top_pts, slope);
+	pair<double,double> bot_intercepts = fitLines(bot_pts, slope); 
 
 	vector<pair<double,double> > lines;
-	lines.push_back( make_pair(slope, t1) );
-	lines.push_back( make_pair(slope, t2) );
+	lines.push_back( make_pair(slope, top_intercepts.first) );
+	lines.push_back( make_pair(slope, top_intercepts.second) );
+	lines.push_back( make_pair(slope, bot_intercepts.first) );
+	lines.push_back( make_pair(slope, bot_intercepts.second) );
 
 	return lines;
 }
@@ -321,25 +313,23 @@ bool v3(ERset& triplet)
 		floodFill(im,mask,Point(er.pixel%im.cols, er.pixel/im.cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
 	}
 
-	// Estimate between 2 and 4 word lines
-	// pair< a (slope), b (intercept) >
+	// Estimate 4 word lines vector < pair< a (slope), b (intercept) > >
 	vector<pair<double,double> > wordlines = estimateWordLines(triplet);
 
-	// Get the word boundary points
+	// Get the word boundary x values
 	it = triplet.begin();
-	Point TL = Point( it->rect.tl().x, it->rect.tl().y );
+	int x_min = it->rect.tl().x;
 	it = triplet.end();
 	it--;
-	Point TR = Point( it->rect.tl().x, it->rect.tl().y );
-	TR.x = TR.x + it->rect.width;
-	
+	int x_max = it->rect.br().x;
 
+	// Draw the word lines
 	double slope = wordlines[0].first;
 	for (int i=0; i<(int)wordlines.size(); i++)
 	{
 		double b = wordlines[i].second;
-		Point pp1 = Point(TL.x, (slope*TL.x)+b);
-		Point pp2 = Point(TR.x, (slope*TR.x)+b);
+		Point pp1 = Point(x_min, (slope*x_min)+b);
+		Point pp2 = Point(x_max, (slope*x_max)+b);
 
 		line(mask, pp1, pp2, Scalar(255), 1 );
 	}
