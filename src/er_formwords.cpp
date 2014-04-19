@@ -98,63 +98,92 @@ bool compareERStat_sets(ERset s1, ERset s2)
 //	return perms;
 //}
 
-//double calcError(vector<Point> pts, int idx, double a)
-//{
-//	Mat Y = (Mat_<double>(3, 1) << pts[0].y, pts[1].y, pts[2].y);
-//	Mat X = (Mat_<double>(3, 1) << pts[0].x, pts[1].x, pts[2].x);
-//
-//	// idx is the index of the pts vector for which the potential line intersects
-//	double b = pts[idx].y - ( a * pts[idx].x ); 
-//	Mat B = (Mat_<double>(3, 1) << b, b, b);
-//	
-//	Scalar E = cv::sum(Y - ( a*X + B ) );
-//	double error = E[0]; 
-//	cout << "Error at idx " << idx << " is " << error << endl;
-//
-//	return error;
-//}
+double calcError1(vector<Point> pts, int idx, double slope)
+{
+	Mat Y = (Mat_<double>(3, 1) << pts[0].y, pts[1].y, pts[2].y);
+	Mat X = (Mat_<double>(3, 1) << pts[0].x, pts[1].x, pts[2].x);
 
-//double calcError(vector<Point> pts, int idx_1, int idx_2, double a)
-//{
-//	Mat Y = (Mat_<double>(3, 1) << pts[0].y, pts[1].y, pts[2].y);
-//	Mat X = (Mat_<double>(3, 1) << pts[0].x, pts[1].x, pts[2].x);
-//
-//	// idx_1 is the fixed index for one the the word lines
-//	// idx_2 is the potential index for one of the word lines
-//	double b = pts[intersect_idx].y - ( a * pts[intersect_idx].x ); 
-//	Mat B = (Mat_<double>(3, 1) << b, b, b);
-//	
-//	Scalar E = cv::sum(Y - ( a*X + B ) );
-//	double error = E[0]; 
-//	cout << "E0 " << E[0] << " E1 " << E[1] << endl;
-//
-//	return error;
-//}
+	// idx is the index of the pts vector for which the potential line intersects
+	double b = pts[idx].y - ( slope * pts[idx].x ); 
+	Mat B = (Mat_<double>(3, 1) << b, b, b);
+	
+	Mat E;
+	cv::pow(Y - ( slope*X + B ), 2, E);
+	Scalar Es = cv::sum(E);
+	double error = Es[0]; 
+	cout << "Error at idx " << idx << " is " << error << endl;
 
-//pair<double,double> fitLines(vector<Point> pts, double a)
-//{
-//	// Only fit lines for triplets
-//	CV_Assert( pts.size() == 3 );
-//
-//	// Fit the first line
-//	double min_error = numeric_limits<double>::max();
-//	double min_idx_1 = 0;
-//	for (int i=0; i<(int)pts.size(); i++)
-//	{
-//			double error = calcError(pts, i, a);
-//			if (error < min_error)
-//			{
-//				min_error = error;
-//				min_idx_1 = i;
-//			}
-//	}
-//
-//	// Fit the second line
-//	double b = pts[min_idx_1].y - ( a * pts[min_idx_1].x );
-//	pair<double,double> line = make_pair(b, 0);
-//
-//	return line;
-//}
+	return error;
+}
+
+double calcError2(vector<Point> pts, int idx1, int idx2,  double slope)
+{
+	Mat Y = (Mat_<double>(3, 1) << pts[0].y, pts[1].y, pts[2].y);
+	Mat X = (Mat_<double>(3, 1) << pts[0].x, pts[1].x, pts[2].x);
+
+	// idx is the index of the pts vector for which the potential line intersects
+	double b1 = pts[idx1].y - ( slope * pts[idx1].x ); 
+	Mat B1 = (Mat_<double>(3, 1) << b1, b1, b1);
+	
+	double b2 = pts[idx2].y - ( slope * pts[idx2].x ); 
+	Mat B2 = (Mat_<double>(3, 1) << b2, b2, b2);
+
+	Mat E1;
+	cv::pow(Y - ( slope*X + B1 ), 2, E1 );
+	Mat E2;
+	cv::pow(Y - ( slope*X + B2 ), 2, E2 );
+	Mat E = cv::min(E1,E2);
+	Scalar Es = cv::sum(E);
+	double error = Es[0]; 
+
+	cout << "E1 is " << E1 << endl;
+	cout << "E2 is " << E2 << endl;
+	cout << "E is " << E << endl;
+	cout << "Error is " << error << endl;
+
+	return error;
+}
+
+pair<double,double> fitLines(vector<Point> pts, double slope)
+{
+	// Only fit lines for triplets
+	CV_Assert( pts.size() == 3 );
+
+	// Fit the first line
+	double min_error = numeric_limits<double>::max();
+	double min_idx_1 = 0;
+	for (int i=0; i<(int)pts.size(); i++)
+	{
+			double error = calcError1(pts, i, slope);
+			if (error < min_error)
+			{
+				min_error = error;
+				min_idx_1 = i;
+			}
+	}
+
+	// Fit the second line
+	min_error = numeric_limits<double>::max();
+	double min_idx_2 = 0;
+	for (int i=0; i<(int)pts.size(); i++)
+	{
+		if (i == min_idx_1)
+			continue;
+
+		double error = calcError2(pts, min_idx_1, i, slope);
+		if (error < min_error)
+		{
+			min_error = error;
+			min_idx_2 = i;
+		}
+	}
+	
+	double b1 = pts[min_idx_1].y - ( slope * pts[min_idx_1].x );
+	double b2 = pts[min_idx_2].y - ( slope * pts[min_idx_2].x );
+	pair<double,double> line = make_pair(b1, b2);
+
+	return line;
+}
 
 double median(vector<double> scores)
 {
@@ -235,8 +264,7 @@ double LeastMedSquaresDirection(vector<Point> pts)
 	return b_best;
 }
 
-//vector<pair<double,double> > estimateWordLines(ERset triplet)
-pair<double,double> estimateWordLines(ERset triplet)
+vector<pair<double,double> > estimateWordLines(ERset triplet)
 {
 	vector<Point> top_pts, bot_pts;
 	for (ERset::iterator it=triplet.begin(); it != triplet.end(); it++)
@@ -253,8 +281,10 @@ pair<double,double> estimateWordLines(ERset triplet)
 	//pair<double,double> best;
 	double slope = LeastMedSquaresDirection(top_pts);
 
-	//pair<double,double> top_intercepts  = fitLines(top_pts, slope);
+	pair<double,double> top_intercepts  = fitLines(top_pts, slope);
 	// Returns: t1 and t2
+	double t1 = top_intercepts.first;
+	double t2 = top_intercepts.second;
 	
 
 
@@ -264,13 +294,16 @@ pair<double,double> estimateWordLines(ERset triplet)
 	//cout << "intercept is " << top_intercepts.first << " " << top_intercepts.second << endl;
 
 	//lines.push_back( make_pair(a, top_intercepts.first) );
-	double b = top_pts[0].y - slope*top_pts[0].x;
+	
+
+	//double b = top_pts[0].y - slope*top_pts[0].x;
 	//cout << "B IS " << b << endl;
 
 	vector<pair<double,double> > lines;
-	lines.push_back( make_pair(slope, b) );
+	lines.push_back( make_pair(slope, t1) );
+	lines.push_back( make_pair(slope, t2) );
 
-	return lines[0];
+	return lines;
 }
 
 bool v3(ERset& triplet)
@@ -295,7 +328,7 @@ bool v3(ERset& triplet)
 	// Estimate between 2 and 4 word lines
 	// pair< a (slope), b (intercept) >
 	//vector<pair<double,double> > lines = estimateWordLines(triplet);
-	pair<double,double> wordline = estimateWordLines(triplet);
+	vector<pair<double,double> > wordlines = estimateWordLines(triplet);
 
 	// Get the word boundary points
 	it = triplet.begin();
@@ -305,23 +338,18 @@ bool v3(ERset& triplet)
 	Point TR = Point( it->rect.tl().x, it->rect.tl().y );
 	TR.x = TR.x + it->rect.width;
 	
-	//double slope = (double)(TR.y-TL.y) / (double)(TR.x-TL.x);
-	//cout << "slope is " << slope << endl;
-	double slope = wordline.first;
-	double b = wordline.second;
-	//cout << "calculated slope is " << 1/lines[0].first << endl;
 
-	//double bb = TL.y - slope*TL.x;
+	double slope = wordlines[0].first;
+	for (int i=0; i<(int)wordlines.size(); i++)
+	{
+		double b = wordlines[i].second;
+		Point pp1 = Point(TL.x, (slope*TL.x)+b);
+		Point pp2 = Point(TR.x, (slope*TR.x)+b);
 
-	Point pp1 = Point(TL.x, (slope*TL.x)+b);
-	Point pp2 = Point(TR.x, (slope*TR.x)+b);
+		line(mask, pp1, pp2, Scalar(255), 2 );
+	}
 
-	cout << "PPoint 1 is (" << pp1.x << "," << pp1.y << ")" << endl;
-	cout << "PPoint 2 is (" << pp2.x << "," << pp2.y << ")" << endl;
-
-	line(mask, pp1, pp2, Scalar(255), 2 );
-
-	cout << "drew line" << endl;
+	cout << "drew lines" << endl;
 	imshow("win", mask);
 	waitKey();
 	
