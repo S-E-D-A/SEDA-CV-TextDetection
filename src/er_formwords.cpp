@@ -82,223 +82,8 @@ bool compareERStat_sets(ERset s1, ERset s2)
 
 }
 
-//vector<vector<int> > GenerateIndexPermutations()
-//{
-//	vector<int> myints = {0, 1, 2};
-//  sort (myints.begin(),myints.end());
-//
-//	vector< vector<int> > perms;
-//  //cout << "The 3! possible permutations with 3 elements:\n";
-//  do {
-//    //cout << myints[0] << ' ' << myints[1] << ' ' << myints[2] << '\n';
-//		perms.push_back(myints);
-//  } while ( next_permutation(myints.begin(),myints.end()) );
-//
-//  //cout << "After loop: " << myints[0] << ' ' << myints[1] << ' ' << myints[2] << '\n';
-//	return perms;
-//}
-
-double calcError1(vector<Point> pts, int idx, double slope)
+void wlDraw(ERset &triplet, ERWordLine &wl)
 {
-	Mat Y = (Mat_<double>(3, 1) << pts[0].y, pts[1].y, pts[2].y);
-	Mat X = (Mat_<double>(3, 1) << pts[0].x, pts[1].x, pts[2].x);
-
-	// idx is the index of the pts vector for which the potential line intersects
-	double b = pts[idx].y - ( slope * pts[idx].x ); 
-	Mat B = (Mat_<double>(3, 1) << b, b, b);
-	
-	Mat E;
-	cv::pow(Y - ( slope*X + B ), 2, E);
-	Scalar Es = cv::sum(E);
-	double error = Es[0]; 
-	cout << "Error at idx " << idx << " is " << error << endl;
-
-	return error;
-}
-
-double calcError2(vector<Point> pts, int idx1, int idx2,  double slope)
-{
-	Mat Y = (Mat_<double>(3, 1) << pts[0].y, pts[1].y, pts[2].y);
-	Mat X = (Mat_<double>(3, 1) << pts[0].x, pts[1].x, pts[2].x);
-
-	// idx is the index of the pts vector for which the potential line intersects
-	double b1 = pts[idx1].y - ( slope * pts[idx1].x ); 
-	Mat B1 = (Mat_<double>(3, 1) << b1, b1, b1);
-	
-	double b2 = pts[idx2].y - ( slope * pts[idx2].x ); 
-	Mat B2 = (Mat_<double>(3, 1) << b2, b2, b2);
-
-	Mat E1;
-	cv::pow(Y - ( slope*X + B1 ), 2, E1 );
-	Mat E2;
-	cv::pow(Y - ( slope*X + B2 ), 2, E2 );
-	Mat E = cv::min(E1,E2);
-	Scalar Es = cv::sum(E);
-	double error = Es[0]; 
-
-	cout << "E1 is " << E1 << endl;
-	cout << "E2 is " << E2 << endl;
-	cout << "E is " << E << endl;
-	cout << "Error is " << error << endl;
-
-	return error;
-}
-
-pair<double,double> fitLines(vector<Point> pts, double slope)
-{
-	// Only fit lines for triplets
-	CV_Assert( pts.size() == 3 );
-
-	// Fit the first line
-	double min_error = numeric_limits<double>::max();
-	double min_idx_1 = 0;
-	for (int i=0; i<(int)pts.size(); i++)
-	{
-			double error = calcError1(pts, i, slope);
-			if (error < min_error)
-			{
-				min_error = error;
-				min_idx_1 = i;
-			}
-	}
-
-	// Fit the second line
-	min_error = numeric_limits<double>::max();
-	double min_idx_2 = 0;
-	for (int i=0; i<(int)pts.size(); i++)
-	{
-		if (i == min_idx_1)
-			continue;
-
-		double error = calcError2(pts, min_idx_1, i, slope);
-		if (error < min_error)
-		{
-			min_error = error;
-			min_idx_2 = i;
-		}
-	}
-	
-	double b1 = pts[min_idx_1].y - ( slope * pts[min_idx_1].x );
-	double b2 = pts[min_idx_2].y - ( slope * pts[min_idx_2].x );
-	pair<double,double> line = make_pair(b1, b2);
-
-	return line;
-}
-
-double median(vector<double> scores)
-{
-  size_t size = scores.size();
-  sort(scores.begin(), scores.end());
-
-  double median;
-  if (size  % 2 == 0)
-      median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
-  else 
-      median = scores[size / 2];
-
-  return median;
-}
-
-double LeastMedSquaresDirection(vector<Point> pts)
-{
-
-	double a_best = 0;
-	double b_best = 0;
-	double d_min = numeric_limits<double>::max();
-
-	unsigned int combs[6][3] =
-	{
-		{2, 1, 0},
-		{2, 0, 1},
-		{1, 2, 0},
-		{1, 0, 2},
-		{0, 2, 1},
-		{0, 1, 2}
-	};
-
-	for (int i=0; i<6; i++)
-	{
-
-		// Choose new x and y combination
-		double xi,xj,xk,yi,yj,yk;
-		xi = (double)pts[combs[i][0]].x;
-		xj = (double)pts[combs[i][1]].x;
-		xk = (double)pts[combs[i][2]].x;
-		yi = (double)pts[combs[i][0]].y;
-		yj = (double)pts[combs[i][1]].y;
-		yk = (double)pts[combs[i][2]].y;
-
-		// Set up X and y matricies
-		Mat X = (Mat_<double>(3,2) << 1, xi, 1, xj, 1, xk);
-		Mat y = (Mat_<double>(3,1) << yi, yj, yk);
-
-		// Calculate slope and intercept for this permutation
-		double b = (yi - yk)/(xi - xk);
-		double a = (yj + yk - b*(xj + xk) )/2;
-		
-		// Calculate residuals
-		Mat w = Mat::zeros(2,1, CV_64F);		
-		w.at<double>(0,0) = a;
-		w.at<double>(1,0) = b;
-		Mat r = cv::abs(y - X*w);
-		cout << "R is " << r << endl;
-
-		// Find median
-		vector<double> findmymed(3);
-		findmymed[0] = r.at<double>(0,0);
-		findmymed[1] = r.at<double>(1,0);
-		findmymed[2] = r.at<double>(2,0);
-		double d = median(findmymed);
-	
-		// Update best median residual
-		if (d < d_min)
-		{
-			d_min = d;
-			a_best = a;
-			b_best = b;
-		}
-
-	}
-	cout << "a_best is " << a_best << endl;
-	cout << "b_best is " << b_best << endl;
-	return b_best;
-}
-
-vector<pair<double,double> > estimateWordLines(ERset triplet)
-{
-	vector<Point> top_pts, bot_pts;
-	for (ERset::iterator it=triplet.begin(); it != triplet.end(); it++)
-	{
-		// Top-left corner
-		top_pts.push_back(it->rect.tl());
-
-		// Bottom-left corner
-		Point b = it->rect.br();
-		b.x = b.x + it->rect.width;
-		bot_pts.push_back(b);
-	}
-
-	// Use the bottom points to determine word line direction
-	double slope = LeastMedSquaresDirection(bot_pts);
-
-	// Using the word line direction, fit two distince lines to the
-	// remaining top and bottom lines to find the four line estimates
-	pair<double,double> top_intercepts = fitLines(top_pts, slope);
-	pair<double,double> bot_intercepts = fitLines(bot_pts, slope); 
-
-	vector<pair<double,double> > lines;
-	lines.push_back( make_pair(slope, top_intercepts.first) );
-	lines.push_back( make_pair(slope, top_intercepts.second) );
-	lines.push_back( make_pair(slope, bot_intercepts.first) );
-	lines.push_back( make_pair(slope, bot_intercepts.second) );
-
-	return lines;
-}
-
-bool v3(ERset& triplet)
-{
-	CV_Assert( triplet.size() == 3);
-
 	// Draw the triplet
 	ERset::iterator it = triplet.begin();
 	int cols = (*it).im_ptr->cols;
@@ -313,30 +98,40 @@ bool v3(ERset& triplet)
 		floodFill(im,mask,Point(er.pixel%im.cols, er.pixel/im.cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
 	}
 
-	// Estimate 4 word lines vector < pair< a (slope), b (intercept) > >
-	vector<pair<double,double> > wordlines = estimateWordLines(triplet);
-
-	// Get the word boundary x values
+	// Get the word boundary points
 	it = triplet.begin();
-	int x_min = it->rect.tl().x;
+	Point TL = Point( it->rect.tl().x, it->rect.tl().y );
 	it = triplet.end();
 	it--;
-	int x_max = it->rect.br().x;
+	Point TR = Point( it->rect.tl().x, it->rect.tl().y );
+	TR.x = TR.x + it->rect.width;
 
-	// Draw the word lines
-	double slope = wordlines[0].first;
-	for (int i=0; i<(int)wordlines.size(); i++)
+	double b;
+	for (int i=0; i<4; i++)
 	{
-		double b = wordlines[i].second;
-		Point pp1 = Point(x_min, (slope*x_min)+b);
-		Point pp2 = Point(x_max, (slope*x_max)+b);
+		switch (i)
+		{
+			case 0: b = wl.tau.t1; break;
+			case 1: b = wl.tau.t2; break;
+			case 2: b = wl.tau.b1; break;
+			default: b = wl.tau.b2; break;
+		}
+		Point p1 = Point(TL.x, (wl.tau.slope*TL.x)+b);
+		Point p2 = Point(TR.x, (wl.tau.slope*TR.x)+b);
 
-		line(mask, pp1, pp2, Scalar(255), 1 );
+		line(mask, p1, p2, Scalar(255), 1 );
 	}
 
-	cout << "drew lines" << endl;
-	imshow("win", mask);
+	imshow("Word Lines", mask);
 	waitKey();
+
+}
+
+bool v3(ERset& triplet)
+{
+
+	//ERWordLine wl = ERWordLine(triplet);
+	//wlDraw(triplet, wl);
 	
 	return true;
 
