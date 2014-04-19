@@ -279,20 +279,17 @@ vector<pair<double,double> > estimateWordLines(ERset triplet)
 	}
 
 	//pair<double,double> best;
-	double slope = LeastMedSquaresDirection(top_pts);
+	double slope = LeastMedSquaresDirection(bot_pts);
 
 	pair<double,double> top_intercepts  = fitLines(top_pts, slope);
 	// Returns: t1 and t2
 	double t1 = top_intercepts.first;
 	double t2 = top_intercepts.second;
-	
-
 
 	for (int i=0; i<top_pts.size(); i++)
 		cout << "top point " << i << " is (" << top_pts[i].x << ","<< top_pts[i].y <<")" << endl;
 
 	//cout << "intercept is " << top_intercepts.first << " " << top_intercepts.second << endl;
-
 	//lines.push_back( make_pair(a, top_intercepts.first) );
 	
 
@@ -322,12 +319,10 @@ bool v3(ERset& triplet)
 		int flags = 4 + (newmaskval << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
 		Mat im = (*er.im_ptr);
 		floodFill(im,mask,Point(er.pixel%im.cols, er.pixel/im.cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
-		rectangle(mask, er.rect.tl(), er.rect.br(), Scalar(255) );
 	}
 
 	// Estimate between 2 and 4 word lines
 	// pair< a (slope), b (intercept) >
-	//vector<pair<double,double> > lines = estimateWordLines(triplet);
 	vector<pair<double,double> > wordlines = estimateWordLines(triplet);
 
 	// Get the word boundary points
@@ -346,7 +341,7 @@ bool v3(ERset& triplet)
 		Point pp1 = Point(TL.x, (slope*TL.x)+b);
 		Point pp2 = Point(TR.x, (slope*TR.x)+b);
 
-		line(mask, pp1, pp2, Scalar(255), 2 );
+		line(mask, pp1, pp2, Scalar(255), 1 );
 	}
 
 	cout << "drew lines" << endl;
