@@ -9,12 +9,20 @@ using namespace std;
 namespace er
 {
 
+// v2 constants
 const double DIST_MAX_RATIO = 2;
 const double DIST_MIN_RATIO = 0.2;
 const double HEIGHT_RATIO = 2;
 const double HORIZ_ANGLE = 20;
+
+// v3 constants
+const double WORD_LINE_DIFF = 0.1;
+
+// other constants
 const double MS_DELAY = 50;
 const int MIN_WORD_LENGTH = 4;
+
+
 
 
 typedef set<ERStat> ERset;
@@ -126,7 +134,7 @@ Mat wlDraw(ERset &triplet, ERWordLine &wl)
 
 }
 
-void erShow(ERset &er_set, double delay)
+Mat erShow(ERset &er_set)
 {
 
 	// Increment er_set iterator to first non-root ER, since the root ER may be a dummy ER
@@ -154,8 +162,10 @@ void erShow(ERset &er_set, double delay)
 
 		}
 	}
-	imshow("Regions", mask);
-	cvMoveWindow("Regions", 200, 50);
+	//imshow("Regions", mask);
+	//waitKey(delay);
+	//cvMoveWindow("Regions", 200, 50);
+	return mask;
 }	
 
 
@@ -271,14 +281,20 @@ bool v3(ERset& quad)
 	Mat im1 = wlDraw(triplet1, wl1);
 	Mat im2 = wlDraw(triplet2, wl2);
 
-	imshow("word 1", im1);
-	imshow("word 2", im2);
+	//imshow("word 1", im1);
+	//imshow("word 2", im2);
 	double d = wl_dist(wl1, wl2);
-	cout << "Distance is " << d << endl;
-	waitKey();
+	//cout << "Distance is " << d << endl;
+	//waitKey(50);
 
-	return true;
-
+	if (d < WORD_LINE_DIFF)
+		return true;
+	else
+	{
+		cout << "v3 PRUNE!" << endl;
+		return false;
+	}
+		
 }
 
 
@@ -368,7 +384,7 @@ void erFormWords(set<ERStat> &regions)
 	CV_Assert( !regions.empty() );
 
 	// Show all regions
-	erShow(regions, 0);
+	erShow(regions);
 
 	vector<list<ERset> > words;
 	// Vector of list of sets to store candidate words
@@ -428,6 +444,8 @@ void erFormWords(set<ERStat> &regions)
 			// Entire word or subword at it1
 			// e.g.		ABCDE
 			ERset er_set1 = *it1;
+
+			CV_Assert( er_set1.size() == d+2 );
 				
 			// First letter of word or subword at it1
 			// e.g.		A
@@ -441,15 +459,27 @@ void erFormWords(set<ERStat> &regions)
 			// New word or subword to be added	
 			// e.g. ABCDEF (empty for now)
 			ERset subset_1N;
-			for (it2 = it1; it2 != words[d].end(); it2++ )
+			for (it2 = it1; it2 != words[d].end(); it2++ ) 
 			{
+				
 				// Word or subword at it2
 				// e.g. BCDEF
 				ERset er_set2 = *it2;
 
+				CV_Assert( er_set2.size() == d+2 );
+
 				// Generate subword from n=1,...,N-1 at it2
 				// e.g. BCDE
 				ERset middle_letters_1_N1 = getSubWord(er_set2.begin(), er_set2.size()-1);
+
+				//if (d > 0)
+				{
+					imshow("word1", erShow(er_set1));
+					imshow("word2", erShow(er_set2));
+					imshow("r1", erShow(middle_letters_2_N));
+					imshow("r2", erShow(middle_letters_1_N1));
+					waitKey(100);
+				}
 
 				// Compare to word at it2 which should be length N-1
 				CV_Assert( middle_letters_2_N.size() == middle_letters_1_N1.size() );
@@ -484,6 +514,14 @@ void erFormWords(set<ERStat> &regions)
 							continue;
 					}
 
+
+					imshow("mereged word", erShow(subset_1N) );
+					waitKey(100);
+					cout << "Size is " << subset_1N.size() << endl;
+					if (subset_1N.size() == 5)
+
+					CV_Assert( subset_1N.size() == d+3 );
+
 					all_words_of_length.push_back(subset_1N);
 				}
 				subset_1N.clear();
@@ -493,7 +531,7 @@ void erFormWords(set<ERStat> &regions)
 		words.push_back(all_words_of_length);
 		all_words_of_length.clear();
 
-		cout << "Finished words of length " << d+1 << endl;
+		cout << "Finished forming words of length " << (d+2) << endl;
 		
 	}
 
@@ -501,12 +539,12 @@ void erFormWords(set<ERStat> &regions)
 	pruneSubwords(words);
 
 	// Show all ERs
-	//for (int d=0; d<(int)words.size(); d++)
-	//{
-	//	list<ERset>::iterator s;
-	//	for (s=words[d].begin(); s != words[d].end(); s++)
-	//		erShow((*s), 10);
-	//}
+	for (int d=0; d<(int)words.size(); d++)
+	{
+		list<ERset>::iterator s;
+		for (s=words[d].begin(); s != words[d].end(); s++)
+			erShow((*s));
+	}
 
 }
 
