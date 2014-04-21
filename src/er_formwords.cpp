@@ -10,7 +10,7 @@ namespace er
 {
 
 // v2 constants
-const double DIST_MAX_RATIO = 2;
+const double DIST_MAX_RATIO = 3;
 const double DIST_MIN_RATIO = 0.2;
 const double HEIGHT_RATIO = 2;
 const double HORIZ_ANGLE = 20;
@@ -26,6 +26,57 @@ const int MIN_WORD_LENGTH = 4;
 
 
 typedef set<ERStat> ERset;
+
+bool compareWords(ERset s1, ERset s2)
+{
+	ERset::iterator it1 = s1.begin();
+	ERset::iterator it2 = s2.begin();
+	while ( it1 != s1.end() && it2 != s2.end() )
+	{
+		if ( !((*it1) == (*it2)) )
+			return false;
+		it1++;
+		it2++;
+	}
+	return true;
+}
+
+struct ERkey
+{
+	//ERkey(ERset _s)
+	//{
+	//	s = _s;
+	//};
+	bool operator==(const ERkey &other) const
+	{ 
+		return compareWords(s, other.s);
+	}
+	ERset s;
+};
+
+struct ERkey_Hasher
+{
+	std::size_t operator()(const ERkey& k) const
+	{
+		using std::size_t;
+		using std::hash;
+		using std::iterator;
+		using er::ERset;
+
+		ERset::iterator it;
+		size_t out = 0;
+		for (it = k.s.begin(); it != k.s.end(); it++)
+		{
+			out = out 
+				^ ( hash<int>()(it->pixel) << 3 )
+				^ ( hash<int>()(it->level) << 2 )
+				^ ( hash<unsigned char *>()(it->im_ptr->data) << 1 );
+		}
+		return out;
+	}
+};
+
+typedef unordered_multimap< ERkey, ERset, ERkey_Hasher > ERmap;
 
 //bool isParentChild_helper(ERStat* node, ERStat* compare, bool look_up)
 //{
@@ -72,23 +123,7 @@ typedef set<ERStat> ERset;
 //
 //}
 
-bool compareERStat_sets(ERset s1, ERset s2)
-{
-	ERset::iterator it1, it2;
 
-	it1 = s1.begin();
-	it2 = s2.begin();
-	while ( it1 != s1.end() && it2 != s2.end() )
-	{
-		if ( !((*it1) == (*it2)) )
-			return false;
-		it1++;
-		it2++;
-	}
-
-	return true;
-
-}
 
 Mat wlDraw(ERset &triplet, ERWordLine &wl)
 {
@@ -378,6 +413,47 @@ ERset getSubWord(ERset::iterator begin, unsigned int length)
 	return subword;
 }
 
+// Split the word into two parts, where division points to the first elt of part2
+pair<ERset, ERset> splitWord( ERset word, ERset::iterator division )
+{
+	
+	ERset part1;
+ 	set_difference ( word.begin(), word.end(), division, word.end(), std::inserter(part1, part1.end()) );
+
+	ERset part2;
+ 	set_intersection ( word.begin(), word.end(), division, word.end(), std::inserter(part2, part2.end()) );
+
+
+	//imshow("wholeword",erShow(word));
+	//imshow("part1",erShow(part1));
+	//imshow("part2",erShow(part2));
+	//waitKey();
+	
+
+	pair<ERset, ERset> out;
+	out.first = part1;
+	out.second = part2;
+
+	return out;
+}
+
+
+
+ERset mergeWords( ERset word1, ERset word2 )
+{
+
+	ERset merged;
+	set_union (word1.begin(), word1.end(), word2.begin(), word2.end(), std::inserter(merged, merged.end()) );
+
+	//imshow("word1",erShow(word1));
+	//imshow("word2",erShow(word2));
+	//imshow("merged",erShow(merged));
+	//waitKey();
+
+	return merged;
+}
+
+
 void erFormWords(set<ERStat> &regions)
 {
 
@@ -436,23 +512,89 @@ void erFormWords(set<ERStat> &regions)
 
 	// --- Create sequences of length 3 ---
 	
-	list<ERset> merged_words;
-	for (int d = 0; !words[d].empty && d < 5; d++ )
+	list<ERset> merged_word_list;
+	for (int d = 0; !words[d].empty() && (d < 5); d++ )
 	{
 		// Hash map for subsequence comparison
-		// Keys: 			letters in position 1...N-1
-		// Elements: 	letter in position N
-		unordered_multimap<ERset, ERStat> ERmap1_N1;
+		//
+		// Keys: 			letters in position 2...N
+		// Elements: 	letter in position 1
+		ERmap er_map;
 
 		// Iterator to iterate through all words of length d+2
 		list<ERset>::iterator words_it;
+
+		// Build map
 		for ( words_it = words[d].begin(); words_it != words[d].end(); words_it++ )
 		{
+			// Split the word at position 2
+			ERset::iterator division = (*words_it).begin();
+			pair<ERset, ERset> parts;
+			parts = splitWord( (*words_it), ++division);
 
+			// Build map using the split at position 2
+			pair<ERkey, ERset> er_pair;
+			ERkey er_key;
+			er_key.s = parts.first;
+			er_pair.first = er_key;
+			er_pair.second = parts.second;
+			er_map.insert(er_pair);
 		}
-		
-	
 
+	//std::cout << "mymap contains:";
+  //for ( auto it = er_map.begin(); it != er_map.end(); ++it )
+	//{
+  //  //std::cout << " " << it->first << ":" << it->second;
+	//	ERset k = it->first.s;
+	//	imshow("key", erShow(k));
+	//	imshow("elt", erShow(it->second));
+	//	waitKey();
+	//}
+  //std::cout << std::endl;	//
+
+		std::cout << "myumm's buckets contain:\n";
+		for ( unsigned i = 0; i < er_map.bucket_count(); ++i) {
+			std::cout << "bucket #" << i << " contains:" << endl;
+			for ( auto local_it = er_map.begin(i); local_it!= er_map.end(i); ++local_it )
+			{
+				//std::cout << " " << local_it->first << ":" << local_it->second;
+				cout <<  "item" << endl;
+				ERset k = local_it->first.s;            				
+        imshow("key", erShow(k));
+        imshow("elt", erShow(local_it->second));
+        waitKey();
+			}
+			std::cout << std::endl;
+		}
+
+		destroyAllWindows();
+		// Retrieve, merge and verify matches. If verfied, add to merged_words
+		for ( words_it = words[d].begin(); words_it != words[d].end(); words_it++ )
+		{
+			// Split the word at position N-1
+			ERset::iterator division = (*words_it).end();
+			pair<ERset, ERset> parts;
+			parts = splitWord( (*words_it), --division);
+
+			//pair<ERmap::iterator, ERmap::iterator> range;
+			//ERkey er_key;
+			//er_key.s = parts.first;
+		 	//range	= er_map.equal_range(er_key);
+			//for (ERmap::iterator range_it=range.first; range_it != er_map.end() && range_it != range.second; range_it++ )
+			//{
+			//	ERset merged_word;
+			//	ERset found_letter = range_it->second;
+
+			//	CV_Assert (found_letter.size() == 1 );
+
+			//	merged_word = mergeWords( found_letter, (*words_it) );
+
+			//	merged_word_list.push_back(merged_word);
+
+			//}
+		}
+
+		words.push_back(merged_word_list);
 	}
 	
 	//// --- Create ER sequences of length 3 ---
