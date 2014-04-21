@@ -535,9 +535,9 @@ void erFormWords(set<ERStat> &regions)
 			// Build map using the split at position 2
 			pair<ERkey, ERset> er_pair;
 			ERkey er_key;
-			er_key.s = parts.first;
+			er_key.s = parts.second;
 			er_pair.first = er_key;
-			er_pair.second = parts.second;
+			er_pair.second = parts.first;
 			er_map.insert(er_pair);
 		}
 
@@ -552,22 +552,22 @@ void erFormWords(set<ERStat> &regions)
 	//}
   //std::cout << std::endl;	//
 
-		std::cout << "myumm's buckets contain:\n";
-		for ( unsigned i = 0; i < er_map.bucket_count(); ++i) {
-			std::cout << "bucket #" << i << " contains:" << endl;
-			for ( auto local_it = er_map.begin(i); local_it!= er_map.end(i); ++local_it )
-			{
-				//std::cout << " " << local_it->first << ":" << local_it->second;
-				cout <<  "item" << endl;
-				ERset k = local_it->first.s;            				
-        imshow("key", erShow(k));
-        imshow("elt", erShow(local_it->second));
-        waitKey();
-			}
-			std::cout << std::endl;
-		}
+		//std::cout << "myumm's buckets contain:\n";
+		//for ( unsigned i = 0; i < er_map.bucket_count(); ++i) {
+		//	std::cout << "bucket #" << i << " contains:" << endl;
+		//	for ( auto local_it = er_map.begin(i); local_it!= er_map.end(i); ++local_it )
+		//	{
+		//		//std::cout << " " << local_it->first << ":" << local_it->second;
+		//		cout <<  "item" << endl;
+		//		ERset k = local_it->first.s;            				
+    //    imshow("key", erShow(k));
+    //    imshow("elt", erShow(local_it->second));
+    //    waitKey();
+		//	}
+		//	std::cout << std::endl;
+		//}
 
-		destroyAllWindows();
+		//destroyAllWindows();
 		// Retrieve, merge and verify matches. If verfied, add to merged_words
 		for ( words_it = words[d].begin(); words_it != words[d].end(); words_it++ )
 		{
@@ -576,22 +576,49 @@ void erFormWords(set<ERStat> &regions)
 			pair<ERset, ERset> parts;
 			parts = splitWord( (*words_it), --division);
 
-			//pair<ERmap::iterator, ERmap::iterator> range;
-			//ERkey er_key;
-			//er_key.s = parts.first;
-		 	//range	= er_map.equal_range(er_key);
-			//for (ERmap::iterator range_it=range.first; range_it != er_map.end() && range_it != range.second; range_it++ )
-			//{
-			//	ERset merged_word;
-			//	ERset found_letter = range_it->second;
+			cout << "Show im" << endl;
+			imshow("wholeword",erShow(*words_it));
+      imshow("searchKey",erShow(parts.first));
+      imshow("addedLetter",erShow(parts.second));
 
-			//	CV_Assert (found_letter.size() == 1 );
+			ERkey er_key;
+			er_key.s = parts.first;
+			pair<ERmap::iterator, ERmap::iterator> range;
+		 	range	= er_map.equal_range(er_key);
 
-			//	merged_word = mergeWords( found_letter, (*words_it) );
+			
+			ERmap::iterator found;
+			found = er_map.find(er_key);
 
-			//	merged_word_list.push_back(merged_word);
+			if (found == er_map.end() )
+			{
+				cout << "NOT Found" << endl;
+      	waitKey();
+				continue;
+			}
+			else
+			{
+				for (ERmap::iterator range_it=range.first; range_it != er_map.end() && range_it != range.second; range_it++ )
+				{
+					cout << "found elt" << endl;
 
-			//}
+					ERset f = range_it->first.s;
+					imshow("foundKey", erShow(f));
+
+					ERset merged_word;
+					ERset found_letter = range_it->second;
+					imshow("foundElt", erShow(found_letter));
+
+					CV_Assert (found_letter.size() == 1 );
+
+					merged_word = mergeWords( found_letter, (*words_it) );
+					imshow("merged word", erShow(merged_word) );
+					waitKey();
+
+					merged_word_list.push_back(merged_word);
+
+				}
+			}
 		}
 
 		words.push_back(merged_word_list);
