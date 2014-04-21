@@ -2,6 +2,7 @@
 #define __ER_FORMWORDS_H
 
 #include "er.hpp"
+#include "er_wordline.hpp"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>

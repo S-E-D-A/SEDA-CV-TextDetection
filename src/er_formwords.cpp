@@ -9,12 +9,20 @@ using namespace std;
 namespace er
 {
 
+// v2 constants
 const double DIST_MAX_RATIO = 2;
 const double DIST_MIN_RATIO = 0.2;
 const double HEIGHT_RATIO = 2;
 const double HORIZ_ANGLE = 20;
+
+// v3 constants
+const double WORD_LINE_DIFF = 0.1;
+
+// other constants
 const double MS_DELAY = 50;
 const int MIN_WORD_LENGTH = 4;
+
+
 
 
 typedef set<ERStat> ERset;
@@ -82,231 +90,8 @@ bool compareERStat_sets(ERset s1, ERset s2)
 
 }
 
-//vector<vector<int> > GenerateIndexPermutations()
-//{
-//	vector<int> myints = {0, 1, 2};
-//  sort (myints.begin(),myints.end());
-//
-//	vector< vector<int> > perms;
-//  //cout << "The 3! possible permutations with 3 elements:\n";
-//  do {
-//    //cout << myints[0] << ' ' << myints[1] << ' ' << myints[2] << '\n';
-//		perms.push_back(myints);
-//  } while ( next_permutation(myints.begin(),myints.end()) );
-//
-//  //cout << "After loop: " << myints[0] << ' ' << myints[1] << ' ' << myints[2] << '\n';
-//	return perms;
-//}
-
-double calcError1(vector<Point> pts, int idx, double slope)
+Mat wlDraw(ERset &triplet, ERWordLine &wl)
 {
-	Mat Y = (Mat_<double>(3, 1) << pts[0].y, pts[1].y, pts[2].y);
-	Mat X = (Mat_<double>(3, 1) << pts[0].x, pts[1].x, pts[2].x);
-
-	// idx is the index of the pts vector for which the potential line intersects
-	double b = pts[idx].y - ( slope * pts[idx].x ); 
-	Mat B = (Mat_<double>(3, 1) << b, b, b);
-	
-	Mat E;
-	cv::pow(Y - ( slope*X + B ), 2, E);
-	Scalar Es = cv::sum(E);
-	double error = Es[0]; 
-	cout << "Error at idx " << idx << " is " << error << endl;
-
-	return error;
-}
-
-double calcError2(vector<Point> pts, int idx1, int idx2,  double slope)
-{
-	Mat Y = (Mat_<double>(3, 1) << pts[0].y, pts[1].y, pts[2].y);
-	Mat X = (Mat_<double>(3, 1) << pts[0].x, pts[1].x, pts[2].x);
-
-	// idx is the index of the pts vector for which the potential line intersects
-	double b1 = pts[idx1].y - ( slope * pts[idx1].x ); 
-	Mat B1 = (Mat_<double>(3, 1) << b1, b1, b1);
-	
-	double b2 = pts[idx2].y - ( slope * pts[idx2].x ); 
-	Mat B2 = (Mat_<double>(3, 1) << b2, b2, b2);
-
-	Mat E1;
-	cv::pow(Y - ( slope*X + B1 ), 2, E1 );
-	Mat E2;
-	cv::pow(Y - ( slope*X + B2 ), 2, E2 );
-	Mat E = cv::min(E1,E2);
-	Scalar Es = cv::sum(E);
-	double error = Es[0]; 
-
-	cout << "E1 is " << E1 << endl;
-	cout << "E2 is " << E2 << endl;
-	cout << "E is " << E << endl;
-	cout << "Error is " << error << endl;
-
-	return error;
-}
-
-pair<double,double> fitLines(vector<Point> pts, double slope)
-{
-	// Only fit lines for triplets
-	CV_Assert( pts.size() == 3 );
-
-	// Fit the first line
-	double min_error = numeric_limits<double>::max();
-	double min_idx_1 = 0;
-	for (int i=0; i<(int)pts.size(); i++)
-	{
-			double error = calcError1(pts, i, slope);
-			if (error < min_error)
-			{
-				min_error = error;
-				min_idx_1 = i;
-			}
-	}
-
-	// Fit the second line
-	min_error = numeric_limits<double>::max();
-	double min_idx_2 = 0;
-	for (int i=0; i<(int)pts.size(); i++)
-	{
-		if (i == min_idx_1)
-			continue;
-
-		double error = calcError2(pts, min_idx_1, i, slope);
-		if (error < min_error)
-		{
-			min_error = error;
-			min_idx_2 = i;
-		}
-	}
-	
-	double b1 = pts[min_idx_1].y - ( slope * pts[min_idx_1].x );
-	double b2 = pts[min_idx_2].y - ( slope * pts[min_idx_2].x );
-	pair<double,double> line = make_pair(b1, b2);
-
-	return line;
-}
-
-double median(vector<double> scores)
-{
-  size_t size = scores.size();
-  sort(scores.begin(), scores.end());
-
-  double median;
-  if (size  % 2 == 0)
-      median = (scores[size / 2 - 1] + scores[size / 2]) / 2;
-  else 
-      median = scores[size / 2];
-
-  return median;
-}
-
-double LeastMedSquaresDirection(vector<Point> pts)
-{
-
-	double a_best = 0;
-	double b_best = 0;
-	double d_min = numeric_limits<double>::max();
-
-	unsigned int combs[6][3] =
-	{
-		{2, 1, 0},
-		{2, 0, 1},
-		{1, 2, 0},
-		{1, 0, 2},
-		{0, 2, 1},
-		{0, 1, 2}
-	};
-
-	for (int i=0; i<6; i++)
-	{
-
-		// Choose new x and y combination
-		double xi,xj,xk,yi,yj,yk;
-		xi = (double)pts[combs[i][0]].x;
-		xj = (double)pts[combs[i][1]].x;
-		xk = (double)pts[combs[i][2]].x;
-		yi = (double)pts[combs[i][0]].y;
-		yj = (double)pts[combs[i][1]].y;
-		yk = (double)pts[combs[i][2]].y;
-
-		// Set up X and y matricies
-		Mat X = (Mat_<double>(3,2) << 1, xi, 1, xj, 1, xk);
-		Mat y = (Mat_<double>(3,1) << yi, yj, yk);
-
-		// Calculate slope and intercept for this permutation
-		double b = (yi - yk)/(xi - xk);
-		double a = (yj + yk - b*(xj + xk) )/2;
-		
-		// Calculate residuals
-		Mat w = Mat::zeros(2,1, CV_64F);		
-		w.at<double>(0,0) = a;
-		w.at<double>(1,0) = b;
-		Mat r = cv::abs(y - X*w);
-		cout << "R is " << r << endl;
-
-		// Find median
-		vector<double> findmymed(3);
-		findmymed[0] = r.at<double>(0,0);
-		findmymed[1] = r.at<double>(1,0);
-		findmymed[2] = r.at<double>(2,0);
-		double d = median(findmymed);
-	
-		// Update best median residual
-		if (d < d_min)
-		{
-			d_min = d;
-			a_best = a;
-			b_best = b;
-		}
-
-	}
-	cout << "a_best is " << a_best << endl;
-	cout << "b_best is " << b_best << endl;
-	return b_best;
-}
-
-vector<pair<double,double> > estimateWordLines(ERset triplet)
-{
-	vector<Point> top_pts, bot_pts;
-	for (ERset::iterator it=triplet.begin(); it != triplet.end(); it++)
-	{
-		// Top-left corner
-		top_pts.push_back(it->rect.tl());
-
-		// Bottom-left corner
-		Point b = it->rect.br();
-		b.x = b.x + it->rect.width;
-		bot_pts.push_back(b);
-	}
-
-	//pair<double,double> best;
-	double slope = LeastMedSquaresDirection(bot_pts);
-
-	pair<double,double> top_intercepts  = fitLines(top_pts, slope);
-	// Returns: t1 and t2
-	double t1 = top_intercepts.first;
-	double t2 = top_intercepts.second;
-
-	for (int i=0; i<top_pts.size(); i++)
-		cout << "top point " << i << " is (" << top_pts[i].x << ","<< top_pts[i].y <<")" << endl;
-
-	//cout << "intercept is " << top_intercepts.first << " " << top_intercepts.second << endl;
-	//lines.push_back( make_pair(a, top_intercepts.first) );
-	
-
-	//double b = top_pts[0].y - slope*top_pts[0].x;
-	//cout << "B IS " << b << endl;
-
-	vector<pair<double,double> > lines;
-	lines.push_back( make_pair(slope, t1) );
-	lines.push_back( make_pair(slope, t2) );
-
-	return lines;
-}
-
-bool v3(ERset& triplet)
-{
-	CV_Assert( triplet.size() == 3);
-
 	// Draw the triplet
 	ERset::iterator it = triplet.begin();
 	int cols = (*it).im_ptr->cols;
@@ -321,10 +106,6 @@ bool v3(ERset& triplet)
 		floodFill(im,mask,Point(er.pixel%im.cols, er.pixel/im.cols), Scalar(255),0,Scalar(er.level),Scalar(0),flags);
 	}
 
-	// Estimate between 2 and 4 word lines
-	// pair< a (slope), b (intercept) >
-	vector<pair<double,double> > wordlines = estimateWordLines(triplet);
-
 	// Get the word boundary points
 	it = triplet.begin();
 	Point TL = Point( it->rect.tl().x, it->rect.tl().y );
@@ -332,27 +113,28 @@ bool v3(ERset& triplet)
 	it--;
 	Point TR = Point( it->rect.tl().x, it->rect.tl().y );
 	TR.x = TR.x + it->rect.width;
-	
 
-	double slope = wordlines[0].first;
-	for (int i=0; i<(int)wordlines.size(); i++)
+	double b;
+	for (int i=0; i<4; i++)
 	{
-		double b = wordlines[i].second;
-		Point pp1 = Point(TL.x, (slope*TL.x)+b);
-		Point pp2 = Point(TR.x, (slope*TR.x)+b);
+		switch (i)
+		{
+			case 0: b = wl.tau.t[0]; break;
+			case 1: b = wl.tau.t[1]; break;
+			case 2: b = wl.tau.b[0]; break;
+			default: b = wl.tau.b[1]; break;
+		}
+		Point p1 = Point(TL.x, (wl.tau.slope*TL.x)+b);
+		Point p2 = Point(TR.x, (wl.tau.slope*TR.x)+b);
 
-		line(mask, pp1, pp2, Scalar(255), 1 );
+		line(mask, p1, p2, Scalar(255), 1 );
 	}
 
-	cout << "drew lines" << endl;
-	imshow("win", mask);
-	waitKey();
-	
-	return true;
+	return mask;
 
 }
 
-void erShow(ERset &er_set, double delay)
+Mat erShow(ERset &er_set)
 {
 
 	// Increment er_set iterator to first non-root ER, since the root ER may be a dummy ER
@@ -380,11 +162,10 @@ void erShow(ERset &er_set, double delay)
 
 		}
 	}
-
-	imshow("Regions", mask);
-	cvMoveWindow("Regions", 200, 50);
-	waitKey(delay);
-
+	//imshow("Regions", mask);
+	//waitKey(delay);
+	//cvMoveWindow("Regions", 200, 50);
+	return mask;
 }	
 
 
@@ -433,6 +214,89 @@ bool v1(const ERStat& er1, const ERStat& er2)
 
 	return true;
 }
+
+double wl_dist(ERWordLine& wl1, ERWordLine& wl2)
+{
+
+	wl_params& tau1 = wl1.tau;
+	wl_params& tau2 = wl2.tau;
+
+	double h = std::max(tau1.h, tau2.h);
+	double xL = std::min(tau1.x_min, tau2.x_min);
+	double xR = std::max(tau1.x_max, tau2.x_max);
+
+	double min_t = numeric_limits<double>::max();
+	double min_b = numeric_limits<double>::max();
+	for (int i=0; i<2; i++)
+	{
+		for (int j=0; j<2; j++)
+		{
+			double tdL = std::abs((tau1.slope*xL+tau1.t[i]) - (tau2.slope*xL+tau2.t[j]));
+			double tdR = std::abs((tau1.slope*xR+tau1.t[i]) - (tau2.slope*xR+tau2.t[j]));
+			double tdelta = (std::max(tdL, tdR) / h);
+
+			double bdL = std::abs((tau1.slope*xL+tau1.b[i]) - (tau2.slope*xL+tau2.b[j]));
+			double bdR = std::abs((tau1.slope*xR+tau1.b[i]) - (tau2.slope*xR+tau2.b[j]));
+			double bdelta = (std::max(bdL, bdR) / h);
+			
+			if (tdelta < min_t)
+				min_t = tdelta;
+
+			if (bdelta < min_b)
+				min_b = bdelta;
+		}
+	}
+	
+	return std::max(min_t, min_b);
+}
+
+bool v3(ERset& quad)
+{
+
+	// Form triplet1 and triplet2
+	ERset triplet1, triplet2;
+	ERset::iterator it = quad.begin();
+	//e.g. 	quad 			= ABCD
+	//			triplet1 	= ABC
+	//			triplet2  = BCD
+	
+	// A
+	triplet1.insert(*it++);
+
+	// B
+	triplet1.insert(*it);
+	triplet2.insert(*it++);
+
+	// C
+	triplet1.insert(*it);
+	triplet2.insert(*it++);
+
+	// D
+	triplet2.insert(*it);
+
+
+	ERWordLine wl1 = ERWordLine(triplet1);
+	ERWordLine wl2 = ERWordLine(triplet2);
+
+	Mat im1 = wlDraw(triplet1, wl1);
+	Mat im2 = wlDraw(triplet2, wl2);
+
+	//imshow("word 1", im1);
+	//imshow("word 2", im2);
+	double d = wl_dist(wl1, wl2);
+	//cout << "Distance is " << d << endl;
+	//waitKey(50);
+
+	if (d < WORD_LINE_DIFF)
+		return true;
+	else
+	{
+		cout << "v3 PRUNE!" << endl;
+		return false;
+	}
+		
+}
+
 
 // Assume s1 is shorter than s2
 bool isSubWord(ERset s1, ERset s2)
@@ -520,7 +384,7 @@ void erFormWords(set<ERStat> &regions)
 	CV_Assert( !regions.empty() );
 
 	// Show all regions
-	erShow(regions, 0);
+	erShow(regions);
 
 	vector<list<ERset> > words;
 	// Vector of list of sets to store candidate words
@@ -580,6 +444,8 @@ void erFormWords(set<ERStat> &regions)
 			// Entire word or subword at it1
 			// e.g.		ABCDE
 			ERset er_set1 = *it1;
+
+			CV_Assert( er_set1.size() == d+2 );
 				
 			// First letter of word or subword at it1
 			// e.g.		A
@@ -593,15 +459,27 @@ void erFormWords(set<ERStat> &regions)
 			// New word or subword to be added	
 			// e.g. ABCDEF (empty for now)
 			ERset subset_1N;
-			for (it2 = it1; it2 != words[d].end(); it2++ )
+			for (it2 = it1; it2 != words[d].end(); it2++ ) 
 			{
+				
 				// Word or subword at it2
 				// e.g. BCDEF
 				ERset er_set2 = *it2;
 
+				CV_Assert( er_set2.size() == d+2 );
+
 				// Generate subword from n=1,...,N-1 at it2
 				// e.g. BCDE
 				ERset middle_letters_1_N1 = getSubWord(er_set2.begin(), er_set2.size()-1);
+
+				//if (d > 0)
+				{
+					imshow("word1", erShow(er_set1));
+					imshow("word2", erShow(er_set2));
+					imshow("r1", erShow(middle_letters_2_N));
+					imshow("r2", erShow(middle_letters_1_N1));
+					waitKey(100);
+				}
 
 				// Compare to word at it2 which should be length N-1
 				CV_Assert( middle_letters_2_N.size() == middle_letters_1_N1.size() );
@@ -630,8 +508,19 @@ void erFormWords(set<ERStat> &regions)
 					// eg. F
 					subset_1N.insert(subset_N);
 
-					if (subset_1N.size() == 3)
-						v3(subset_1N);
+					if (subset_1N.size() == 4)
+					{
+						if ( ! v3(subset_1N) )
+							continue;
+					}
+
+
+					imshow("mereged word", erShow(subset_1N) );
+					waitKey(100);
+					cout << "Size is " << subset_1N.size() << endl;
+					if (subset_1N.size() == 5)
+
+					CV_Assert( subset_1N.size() == d+3 );
 
 					all_words_of_length.push_back(subset_1N);
 				}
@@ -642,7 +531,7 @@ void erFormWords(set<ERStat> &regions)
 		words.push_back(all_words_of_length);
 		all_words_of_length.clear();
 
-		cout << "Finished words of length " << d+1 << endl;
+		cout << "Finished forming words of length " << (d+2) << endl;
 		
 	}
 
@@ -650,12 +539,12 @@ void erFormWords(set<ERStat> &regions)
 	pruneSubwords(words);
 
 	// Show all ERs
-	//for (int d=0; d<(int)words.size(); d++)
-	//{
-	//	list<ERset>::iterator s;
-	//	for (s=words[d].begin(); s != words[d].end(); s++)
-	//		erShow((*s), 10);
-	//}
+	for (int d=0; d<(int)words.size(); d++)
+	{
+		list<ERset>::iterator s;
+		for (s=words[d].begin(); s != words[d].end(); s++)
+			erShow((*s));
+	}
 
 }
 
