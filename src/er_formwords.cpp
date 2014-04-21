@@ -432,108 +432,130 @@ void erFormWords(set<ERStat> &regions)
 	}
 	words.push_back(all_pairs);
 	all_pairs.clear();
+
+
+	// --- Create sequences of length 3 ---
 	
-	// --- Create ER sequences of length 3 ---
-	list<ERset> all_words_of_length;
-	for (int d = 0; !words[d].empty() && d < 7; d++ )
+	list<ERset> merged_words;
+	for (int d = 0; !words[d].empty && d < 5; d++ )
 	{
-		list<ERset>::iterator it1, it2;
-		it1	= words[d].begin();	
-		for (it1 = words[d].begin(); it1 != words[d].end(); it1++ )
+		// Hash map for subsequence comparison
+		// Keys: 			letters in position 1...N-1
+		// Elements: 	letter in position N
+		unordered_multimap<ERset, ERStat> ERmap1_N1;
+
+		// Iterator to iterate through all words of length d+2
+		list<ERset>::iterator words_it;
+		for ( words_it = words[d].begin(); words_it != words[d].end(); words_it++ )
 		{
-			// Entire word or subword at it1
-			// e.g.		ABCDE
-			ERset er_set1 = *it1;
 
-			CV_Assert( er_set1.size() == d+2 );
-				
-			// First letter of word or subword at it1
-			// e.g.		A
-			ERStat first_letter = *getSubWord(er_set1.begin(), 1).begin();
-
-			// Generate the subword from n = 2, ..., N at it1
-			// e.g.		BCDE
-			ERset::iterator mid = er_set1.begin();
-			ERset middle_letters_2_N = getSubWord(++mid, er_set1.size()-1);
-	
-			// New word or subword to be added	
-			// e.g. ABCDEF (empty for now)
-			ERset subset_1N;
-			for (it2 = it1; it2 != words[d].end(); it2++ ) 
-			{
-				
-				// Word or subword at it2
-				// e.g. BCDEF
-				ERset er_set2 = *it2;
-
-				CV_Assert( er_set2.size() == d+2 );
-
-				// Generate subword from n=1,...,N-1 at it2
-				// e.g. BCDE
-				ERset middle_letters_1_N1 = getSubWord(er_set2.begin(), er_set2.size()-1);
-
-				//if (d > 0)
-				{
-					imshow("word1", erShow(er_set1));
-					imshow("word2", erShow(er_set2));
-					imshow("r1", erShow(middle_letters_2_N));
-					imshow("r2", erShow(middle_letters_1_N1));
-					waitKey(100);
-				}
-
-				// Compare to word at it2 which should be length N-1
-				CV_Assert( middle_letters_2_N.size() == middle_letters_1_N1.size() );
-
-				// Last letter of word of subword at it2
-				// e.g. F
-				ERStat subset_N;
-				ERset::iterator it_last_2 = er_set2.end();
-				it_last_2--;
-				subset_N = (*it_last_2);
-
-				if ( compareERStat_sets(middle_letters_2_N, middle_letters_1_N1) )
-				{
-					// Insert the first letter from it1
-					// e.g. A
-					subset_1N.insert(first_letter);
-					
-					// Insert all the letters from the overlap of it1 and it2 (length N-1)
-					// e.g. BCDE
-					ERset::iterator it_mid;
-					it_mid = middle_letters_1_N1.begin();
-					for ( ; it_mid != middle_letters_1_N1.end(); it_mid++)
-						subset_1N.insert(*it_mid);
-
-					// Insert the last letter from it2
-					// eg. F
-					subset_1N.insert(subset_N);
-
-					if (subset_1N.size() == 4)
-					{
-						if ( ! v3(subset_1N) )
-							continue;
-					}
-
-
-					imshow("mereged word", erShow(subset_1N) );
-					waitKey(100);
-					cout << "Size is " << subset_1N.size() << endl;
-					if (subset_1N.size() == 5)
-
-					CV_Assert( subset_1N.size() == d+3 );
-
-					all_words_of_length.push_back(subset_1N);
-				}
-				subset_1N.clear();
-			}
 		}
-
-		words.push_back(all_words_of_length);
-		all_words_of_length.clear();
-
-		cout << "Finished forming words of length " << (d+2) << endl;
 		
+	
+
 	}
+	
+	//// --- Create ER sequences of length 3 ---
+	//list<ERset> all_words_of_length;
+	//for (int d = 0; !words[d].empty() && d < 7; d++ )
+	//{
+	//	list<ERset>::iterator it1, it2;
+	//	it1	= words[d].begin();	
+	//	for (it1 = words[d].begin(); it1 != words[d].end(); it1++ )
+	//	{
+	//		// Entire word or subword at it1
+	//		// e.g.		ABCDE
+	//		ERset er_set1 = *it1;
+
+	//		CV_Assert( er_set1.size() == d+2 );
+	//			
+	//		// First letter of word or subword at it1
+	//		// e.g.		A
+	//		ERStat first_letter = *getSubWord(er_set1.begin(), 1).begin();
+
+	//		// Generate the subword from n = 2, ..., N at it1
+	//		// e.g.		BCDE
+	//		ERset::iterator mid = er_set1.begin();
+	//		ERset middle_letters_2_N = getSubWord(++mid, er_set1.size()-1);
+	//
+	//		// New word or subword to be added	
+	//		// e.g. ABCDEF (empty for now)
+	//		ERset subset_1N;
+	//		for (it2 = it1; it2 != words[d].end(); it2++ ) 
+	//		{
+	//			
+	//			// Word or subword at it2
+	//			// e.g. BCDEF
+	//			ERset er_set2 = *it2;
+
+	//			CV_Assert( er_set2.size() == d+2 );
+
+	//			// Generate subword from n=1,...,N-1 at it2
+	//			// e.g. BCDE
+	//			ERset middle_letters_1_N1 = getSubWord(er_set2.begin(), er_set2.size()-1);
+
+	//			//if (d > 0)
+	//			{
+	//				imshow("word1", erShow(er_set1));
+	//				imshow("word2", erShow(er_set2));
+	//				imshow("r1", erShow(middle_letters_2_N));
+	//				imshow("r2", erShow(middle_letters_1_N1));
+	//				waitKey(100);
+	//			}
+
+	//			// Compare to word at it2 which should be length N-1
+	//			CV_Assert( middle_letters_2_N.size() == middle_letters_1_N1.size() );
+
+	//			// Last letter of word of subword at it2
+	//			// e.g. F
+	//			ERStat subset_N;
+	//			ERset::iterator it_last_2 = er_set2.end();
+	//			it_last_2--;
+	//			subset_N = (*it_last_2);
+
+	//			if ( compareERStat_sets(middle_letters_2_N, middle_letters_1_N1) )
+	//			{
+	//				// Insert the first letter from it1
+	//				// e.g. A
+	//				subset_1N.insert(first_letter);
+	//				
+	//				// Insert all the letters from the overlap of it1 and it2 (length N-1)
+	//				// e.g. BCDE
+	//				ERset::iterator it_mid;
+	//				it_mid = middle_letters_1_N1.begin();
+	//				for ( ; it_mid != middle_letters_1_N1.end(); it_mid++)
+	//					subset_1N.insert(*it_mid);
+
+	//				// Insert the last letter from it2
+	//				// eg. F
+	//				subset_1N.insert(subset_N);
+
+	//				if (subset_1N.size() == 4)
+	//				{
+	//					if ( ! v3(subset_1N) )
+	//						continue;
+	//				}
+
+
+	//				imshow("mereged word", erShow(subset_1N) );
+	//				waitKey(100);
+	//				cout << "Size is " << subset_1N.size() << endl;
+	//				if (subset_1N.size() == 5)
+
+	//				CV_Assert( subset_1N.size() == d+3 );
+
+	//				all_words_of_length.push_back(subset_1N);
+	//			}
+	//			subset_1N.clear();
+	//		}
+	//	}
+
+	//	words.push_back(all_words_of_length);
+	//	all_words_of_length.clear();
+
+	//	cout << "Finished forming words of length " << (d+2) << endl;
+	//	
+	//}
 
 	// Prune subwords from words
 	pruneSubwords(words);
