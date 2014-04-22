@@ -16,7 +16,7 @@ const double HEIGHT_RATIO = 2;
 const double HORIZ_ANGLE = 20;
 
 // v3 constants
-const double WORD_LINE_DIFF = 0.1;
+const double WORD_LINE_DIFF = 0.15;
 
 // other constants
 const double MS_DELAY = 50;
@@ -26,6 +26,57 @@ const int MIN_WORD_LENGTH = 4;
 
 
 typedef set<ERStat> ERset;
+
+bool compareWords(ERset s1, ERset s2)
+{
+	ERset::iterator it1 = s1.begin();
+	ERset::iterator it2 = s2.begin();
+	while ( it1 != s1.end() && it2 != s2.end() )
+	{
+		if ( !((*it1) == (*it2)) )
+			return false;
+		it1++;
+		it2++;
+	}
+	return true;
+}
+
+struct ERkey
+{
+	//ERkey(ERset _s)
+	//{
+	//	s = _s;
+	//};
+	bool operator==(const ERkey &other) const
+	{ 
+		return compareWords(s, other.s);
+	}
+	ERset s;
+};
+
+struct ERkey_Hasher
+{
+	std::size_t operator()(const ERkey& k) const
+	{
+		using std::size_t;
+		using std::hash;
+		using std::iterator;
+		using er::ERset;
+
+		ERset::iterator it;
+		size_t out = 0;
+		for (it = k.s.begin(); it != k.s.end(); it++)
+		{
+			out = out 
+				^ ( hash<int>()(it->pixel) << 3 )
+				^ ( hash<int>()(it->level) << 2 )
+				^ ( hash<unsigned char *>()(it->im_ptr->data) << 1 );
+		}
+		return out;
+	}
+};
+
+typedef unordered_multimap< ERkey, ERset, ERkey_Hasher > ERmap;
 
 //bool isParentChild_helper(ERStat* node, ERStat* compare, bool look_up)
 //{
@@ -72,23 +123,7 @@ typedef set<ERStat> ERset;
 //
 //}
 
-bool compareERStat_sets(ERset s1, ERset s2)
-{
-	ERset::iterator it1, it2;
 
-	it1 = s1.begin();
-	it2 = s2.begin();
-	while ( it1 != s1.end() && it2 != s2.end() )
-	{
-		if ( !((*it1) == (*it2)) )
-			return false;
-		it1++;
-		it2++;
-	}
-
-	return true;
-
-}
 
 Mat wlDraw(ERset &triplet, ERWordLine &wl)
 {
@@ -250,7 +285,7 @@ double wl_dist(ERWordLine& wl1, ERWordLine& wl2)
 	return std::max(min_t, min_b);
 }
 
-bool v3(ERset& quad)
+bool v4(ERset& quad)
 {
 
 	// Form triplet1 and triplet2
@@ -274,7 +309,6 @@ bool v3(ERset& quad)
 	// D
 	triplet2.insert(*it);
 
-
 	ERWordLine wl1 = ERWordLine(triplet1);
 	ERWordLine wl2 = ERWordLine(triplet2);
 
@@ -285,13 +319,13 @@ bool v3(ERset& quad)
 	//imshow("word 2", im2);
 	double d = wl_dist(wl1, wl2);
 	//cout << "Distance is " << d << endl;
-	//waitKey(50);
+	//waitKey();
 
 	if (d < WORD_LINE_DIFF)
 		return true;
 	else
 	{
-		cout << "v3 PRUNE!" << endl;
+		//cout << "v3 PRUNE!" << endl;
 		return false;
 	}
 		
@@ -378,13 +412,43 @@ ERset getSubWord(ERset::iterator begin, unsigned int length)
 	return subword;
 }
 
-void erFormWords(set<ERStat> &regions)
+// Split the word into two parts, where division points to the first elt of part2
+pair<ERset, ERset> splitWord( ERset word, ERset::iterator division )
+{
+	
+	ERset part1;
+ 	set_difference ( word.begin(), word.end(), division, word.end(), std::inserter(part1, part1.end()) );
+
+	ERset part2;
+ 	set_intersection ( word.begin(), word.end(), division, word.end(), std::inserter(part2, part2.end()) );
+
+	pair<ERset, ERset> out;
+	out.first = part1;
+	out.second = part2;
+
+	return out;
+}
+
+
+
+ERset mergeWords( ERset word1, ERset word2 )
+{
+	ERset merged;
+	set_union (word1.begin(), word1.end(), word2.begin(), word2.end(), std::inserter(merged, merged.end()) );
+	return merged;
+}
+
+
+void erFormWords(list<ERset>& out, ERset &regions)
 {
 
 	CV_Assert( !regions.empty() );
 
 	// Show all regions
-	erShow(regions);
+	imshow("ALL Regions", erShow(regions));
+	waitKey();
+	destroyWindow("All Regions");
+
 
 	vector<list<ERset> > words;
 	// Vector of list of sets to store candidate words
@@ -432,108 +496,89 @@ void erFormWords(set<ERStat> &regions)
 	}
 	words.push_back(all_pairs);
 	all_pairs.clear();
-	
-	// --- Create ER sequences of length 3 ---
-	list<ERset> all_words_of_length;
-	for (int d = 0; !words[d].empty() && d < 7; d++ )
+
+	// --- Create sequences of length 3 ---
+	for (int d = 0; !words[d].empty() ; d++ )
 	{
-		list<ERset>::iterator it1, it2;
-		it1	= words[d].begin();	
-		for (it1 = words[d].begin(); it1 != words[d].end(); it1++ )
+
+		// List of newly created words for this iteration
+		list<ERset> merged_word_list;
+
+		// Hash map for subsequence comparison
+		//
+		// Keys: 			letters in position 2...N
+		// Elements: 	letter in position 1
+		ERmap er_map;
+
+		// Iterator to iterate through all words of length d+2
+		list<ERset>::iterator words_it;
+
+		// Build map
+		for ( words_it = words[d].begin(); words_it != words[d].end(); words_it++ )
 		{
-			// Entire word or subword at it1
-			// e.g.		ABCDE
-			ERset er_set1 = *it1;
+			// Split the word at position 2
+			ERset::iterator division = (*words_it).begin();
+			pair<ERset, ERset> parts;
+			parts = splitWord( (*words_it), ++division);
 
-			CV_Assert( er_set1.size() == d+2 );
-				
-			// First letter of word or subword at it1
-			// e.g.		A
-			ERStat first_letter = *getSubWord(er_set1.begin(), 1).begin();
+			// Build map using the split at position 2
+			pair<ERkey, ERset> er_pair;
+			ERkey er_key;
+			er_key.s = parts.second;
+			er_pair.first = er_key;
+			er_pair.second = parts.first;
+			er_map.insert(er_pair);
+		}
 
-			// Generate the subword from n = 2, ..., N at it1
-			// e.g.		BCDE
-			ERset::iterator mid = er_set1.begin();
-			ERset middle_letters_2_N = getSubWord(++mid, er_set1.size()-1);
-	
-			// New word or subword to be added	
-			// e.g. ABCDEF (empty for now)
-			ERset subset_1N;
-			for (it2 = it1; it2 != words[d].end(); it2++ ) 
-			{
-				
-				// Word or subword at it2
-				// e.g. BCDEF
-				ERset er_set2 = *it2;
+		// Retrieve, merge and verify matches. If verfied, add to merged_words
+		for ( words_it = words[d].begin(); words_it != words[d].end(); words_it++ )
+		{
+			// Split the word at position N-1
+			ERset::iterator division = (*words_it).end();
+			pair<ERset, ERset> parts;
+			parts = splitWord( (*words_it), --division);
 
-				CV_Assert( er_set2.size() == d+2 );
+			//cout << "Show im" << endl;
+			//imshow("wholeword",erShow(*words_it));
+      //imshow("searchKey",erShow(parts.first));
+      //imshow("addedLetter",erShow(parts.second));
 
-				// Generate subword from n=1,...,N-1 at it2
-				// e.g. BCDE
-				ERset middle_letters_1_N1 = getSubWord(er_set2.begin(), er_set2.size()-1);
+			ERkey er_key;
+			er_key.s = parts.first;
+			pair<ERmap::iterator, ERmap::iterator> range;
+		 	range	= er_map.equal_range(er_key);
 
-				//if (d > 0)
+				for (ERmap::iterator range_it=range.first; range_it != er_map.end() && range_it != range.second; range_it++ )
 				{
-					imshow("word1", erShow(er_set1));
-					imshow("word2", erShow(er_set2));
-					imshow("r1", erShow(middle_letters_2_N));
-					imshow("r2", erShow(middle_letters_1_N1));
-					waitKey(100);
-				}
+					ERset f = range_it->first.s;
 
-				// Compare to word at it2 which should be length N-1
-				CV_Assert( middle_letters_2_N.size() == middle_letters_1_N1.size() );
+					ERset merged_word;
+					ERset found_letter = range_it->second;
 
-				// Last letter of word of subword at it2
-				// e.g. F
-				ERStat subset_N;
-				ERset::iterator it_last_2 = er_set2.end();
-				it_last_2--;
-				subset_N = (*it_last_2);
+					merged_word = mergeWords( found_letter, (*words_it) );
 
-				if ( compareERStat_sets(middle_letters_2_N, middle_letters_1_N1) )
-				{
-					// Insert the first letter from it1
-					// e.g. A
-					subset_1N.insert(first_letter);
-					
-					// Insert all the letters from the overlap of it1 and it2 (length N-1)
-					// e.g. BCDE
-					ERset::iterator it_mid;
-					it_mid = middle_letters_1_N1.begin();
-					for ( ; it_mid != middle_letters_1_N1.end(); it_mid++)
-						subset_1N.insert(*it_mid);
+					CV_Assert (found_letter.size() == 1 );
+					CV_Assert ((int)merged_word.size() == d+3);
 
-					// Insert the last letter from it2
-					// eg. F
-					subset_1N.insert(subset_N);
+					//imshow("foundKey", erShow(f));
+					//imshow("foundElt", erShow(found_letter));
+					//imshow("merged word", erShow(merged_word) );
+					//waitKey();
 
-					if (subset_1N.size() == 4)
+					if (merged_word.size() == 4)
 					{
-						if ( ! v3(subset_1N) )
+						if (! v4(merged_word))
 							continue;
 					}
 
+					merged_word_list.push_back(merged_word);
 
-					imshow("mereged word", erShow(subset_1N) );
-					waitKey(100);
-					cout << "Size is " << subset_1N.size() << endl;
-					if (subset_1N.size() == 5)
-
-					CV_Assert( subset_1N.size() == d+3 );
-
-					all_words_of_length.push_back(subset_1N);
 				}
-				subset_1N.clear();
-			}
 		}
 
-		words.push_back(all_words_of_length);
-		all_words_of_length.clear();
-
-		cout << "Finished forming words of length " << (d+2) << endl;
-		
+		words.push_back(merged_word_list);
 	}
+	destroyAllWindows();
 
 	// Prune subwords from words
 	pruneSubwords(words);
@@ -543,7 +588,12 @@ void erFormWords(set<ERStat> &regions)
 	{
 		list<ERset>::iterator s;
 		for (s=words[d].begin(); s != words[d].end(); s++)
-			erShow((*s));
+		{
+			//imshow("FINAL",erShow((*s)));
+			//waitKey(300);
+			out.push_back(*s);
+		}
+		
 	}
 
 }

@@ -13,6 +13,7 @@
 #include <utility>
 #include <limits>
 #include <set>
+#include <unordered_map>
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -20,7 +21,7 @@
 namespace er
 {
 
-void erFormWords(std::set<er::ERStat> &regions);
+void erFormWords(std::list<std::set<er::ERStat> > &out, std::set<er::ERStat> &regions);
 
 }
 
