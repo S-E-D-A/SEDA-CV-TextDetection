@@ -169,7 +169,8 @@ void ERWordLine::LeastMedSquaresDirection(vector<Point> pts)
 		Mat w = Mat::zeros(2,1, CV_64F);		
 		w.at<double>(0,0) = a;
 		w.at<double>(1,0) = b;
-		Mat r = cv::abs(y - X*w);
+		Mat r;
+		cv::pow(y - X*w, 2, r);
 
 		// Find median
 		vector<double> findmymed(3);
