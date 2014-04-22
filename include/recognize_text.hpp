@@ -24,6 +24,7 @@ namespace recognize_text
 	void components_draw(Mat &src, vector<er::ERStat> &comps);
 	void groups_draw(Mat &src, vector<Rect> &groups);
 	void er_show(vector<Mat> &channels, vector<vector<er::ERStat> > &regions);
+	void er_nms(list<set<er::ERStat> >& regions, double threshold);
 }
 
 #endif

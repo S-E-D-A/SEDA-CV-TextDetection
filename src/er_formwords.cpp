@@ -10,13 +10,13 @@ namespace er
 {
 
 // v2 constants
-const double DIST_MAX_RATIO = 2;
+const double DIST_MAX_RATIO = 2.0;
 const double DIST_MIN_RATIO = 0.2;
-const double HEIGHT_RATIO = 2;
-const double HORIZ_ANGLE = 20;
+const double HEIGHT_RATIO = 1.5;
+const double HORIZ_ANGLE = 15;
 
 // v3 constants
-const double WORD_LINE_DIFF = 0.15;
+const double WORD_LINE_DIFF = 0.10;
 
 // other constants
 const double MS_DELAY = 50;
@@ -498,7 +498,7 @@ void erFormWords(list<ERset>& out, ERset &regions)
 	all_pairs.clear();
 
 	// --- Create sequences of length 3 ---
-	for (int d = 0; !words[d].empty() ; d++ )
+	for (int d = 0; !words[d].empty() && (d<6) ; d++ )
 	{
 
 		// List of newly created words for this iteration

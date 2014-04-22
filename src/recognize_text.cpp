@@ -45,9 +45,15 @@ namespace recognize_text
 		list<ERset> out;
 		erFormWords(out, all_regions);
 
-		words_draw(src, out);
+		Mat im_out1 = src.clone();
+		words_draw(im_out1, out);
 		cout << "Done!" << endl << endl;
-		imshow("Detections", src);
+		imshow("Detections", im_out1);
+
+		Mat im_out2 = src.clone();
+		er_nms(out, 0.2);
+		words_draw(im_out2, out);
+		imshow("After NMS", im_out2);
 		waitKey();
 
 		//if( waitKey (-1) == 101)
@@ -64,94 +70,87 @@ namespace recognize_text
 	/* -------------------------------- ER Recognition Algorithm --------------------------*/
 	/* ------------------------------------------------------------------------------------*/
 
-	struct ERRegion
+	vector<Point> getBB(set<ERStat> &region)
 	{
-		Rect rect;
-		double score;
-		int channel;
-		int index;
-	};
 
-//	bool sort_regions(const ERRegion &r1, const ERRegion &r2)
-//	{
-//		return (r1.score > r2.score);
-//	}
-//
-//	void er_nms(vector<vector<ERStat> > &regions, double threshold)
-//	{
-//
-//		if (regions.empty())
-//			return;
-//
-//		forward_list<ERRegion> box_list;
-//		for (int c=0; c<(int)regions.size(); c++)
-//		{
-//			for (int i=0; i<(int)regions[c].size(); i++)
-//			{
-//				ERStat stat = regions[c][i];
-//				ERRegion box = {stat.rect, stat.probability, c, i};
-//				box_list.push_front(box);
-//			}
-//		}
-//		
-//		box_list.sort(sort_regions);
-//
-//		for (auto it = box_list.begin(); it != box_list.end(); ++it)
-//			cout << "box at " << it->channel << " , " << it->index << " score is " << it->score << endl;
-//
-//		auto it_a = box_list.begin();
-//
-//		while (it_a != box_list.end())
-//		{
-//			auto it_b_prev = box_list.before_begin();
-//			auto it_b = box_list.begin(); 
-//
-//			while (it_b != box_list.end())
-//			{
-//				if (it_b == it_a)
-//				{
-//					it_b_prev++;
-//					it_b++;
-//					continue;
-//				}
-//
-//				int xx1 = max(it_a->rect.tl().x, it_b->rect.tl().x);
-//				int yy1 = max(it_a->rect.tl().y, it_b->rect.tl().y);
-//				int xx2 = max(it_a->rect.br().x, it_b->rect.br().x);
-//				int yy2 = max(it_a->rect.br().y, it_b->rect.br().y);
-//				int w = xx2 - xx1;
-//				int h = yy2 - yy1;
-//
-//				// if the bounding boxes overlap
-//				if ( w > 0 && h > 0 )
-//				{
-//
-//					// calculate ratio of overlap box to it_b box
-//					Size s = it_b->rect.br() - it_b->rect.tl();
-//					double o = w * h / (s.width * s.height); 
-//
-//					// if the overlap is greater than threshold, remove it
-//					if (o > threshold)
-//					{
-//						it_b++;
-//						box_list.erase_after(it_b_prev);
-//					}
-//				}
-//
-//				it_b_prev++;
-//				it_b++;
-//			}
-//
-//			it_a++;
-//		}
-//
-//		cout << "blahh " << endl;
-//
-//		for (auto it = box_list.begin(); it != box_list.end(); ++it)
-//			cout << "box at " << it->channel << " , " << it->index << " score is " << it->score << endl;
-//
-//		
-//	}
+		set<ERStat>::iterator first = region.begin();
+		Point TL = first->rect.tl();
+		Point BL = Point(first->rect.tl().x, first->rect.tl().y + first->rect.height);
+
+		set<ERStat>::iterator last = region.end();
+		last--;
+		Point TR = Point(last->rect.br().x, last->rect.br().y - first->rect.height);
+		Point BR = last->rect.br();
+
+		vector<Point> out;
+		out.push_back(TL);
+		out.push_back(BL);
+		out.push_back(TR);
+		out.push_back(BR);
+
+		return out;
+	}
+
+//   Sort Regions by Probability Score (after recognition)
+//   **For now, sort by area
+	bool sort_regions(set<ERStat> &r1, set<ERStat> &r2)
+	{
+		vector<Point> BBa = getBB(r1);
+		vector<Point> BBb = getBB(r2);
+
+		double a1 = abs(BBa[0].x - BBa[2].x) * abs(BBa[0].y - BBa[2].y);
+		double a2 = abs(BBb[0].x - BBb[2].x) * abs(BBb[0].y - BBb[2].y);
+
+		return (a1 > a2);
+	}
+
+	void er_nms(list<set<ERStat> > &regions, double threshold)
+	{
+
+		if (regions.empty())
+			return;
+		
+		// Sort regions by recognition probability
+		// (For now, sort by area)
+		regions.sort(sort_regions);
+
+		for (list<set<ERStat> >::iterator it_a = regions.begin(); it_a != regions.end(); it_a++)
+		{
+			for(list<set<ERStat> >::iterator it_b = it_a; it_b != regions.end(); it_b++)
+			{
+				if (it_b == it_a)
+					continue;
+
+				vector<Point> BBa = getBB(*it_a);
+				vector<Point> BBb = getBB(*it_b);
+
+				int xx1 = max(BBa[0].x, BBb[0].x);
+				int yy1 = max(BBa[0].y, BBb[0].y);
+				int xx2 = max(BBa[2].x, BBb[0].x);
+				int yy2 = max(BBa[2].y, BBb[0].y);
+				double w = xx2 - xx1;
+				double h = yy2 - yy1;
+
+				// if the bounding boxes overlap
+				if ( w > 0 && h > 0 )
+				{
+
+					// calculate ratio of overlap box to it_b box
+					Size s = BBb[0] - BBb[2];
+					double o = (double)(w * h) / (double)(s.width * s.height); 
+
+					// if the overlap is greater than threshold, remove it
+					if (std::abs(o) > threshold)
+					{
+						it_b = regions.erase(it_b);
+						it_b--;
+					}
+
+				}
+			}
+		}
+		
+	}
 
 	void words_draw(Mat& img, list<set<ERStat> > & words)
 	{
