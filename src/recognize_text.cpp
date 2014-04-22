@@ -42,11 +42,16 @@ namespace recognize_text
 			for (int j=0; j<(int)regions[i].size(); j++)
 				all_regions.insert(regions[i][j]);
 
-		erFormWords(all_regions);
+		list<ERset> out;
+		erFormWords(out, all_regions);
 
+		words_draw(src, out);
 		cout << "Done!" << endl << endl;
-		if( waitKey (-1) == 101)
-			er_show(channels,regions);
+		imshow("Detections", src);
+		waitKey();
+
+		//if( waitKey (-1) == 101)
+		//	er_show(channels,all_regions);
 
 		// memory clean-up
 		er_filter1.release();
@@ -148,6 +153,27 @@ namespace recognize_text
 //		
 //	}
 
+	void words_draw(Mat& img, list<set<ERStat> > & words)
+	{
+		for (list<ERset>::iterator it=words.begin(); it != words.end(); it++)
+		{
+				set<ERStat>::iterator first = it->begin();
+				Point TL = first->rect.tl();
+				Point BL = Point(first->rect.tl().x, first->rect.tl().y + first->rect.height);
+
+				set<ERStat>::iterator last = it->end();
+				last--;
+				Point TR = Point(last->rect.br().x, last->rect.br().y - first->rect.height);
+				Point BR = last->rect.br();
+
+				Scalar c = Scalar(255,0,0);
+				int t = 2;
+				line(img, TL, BL, c, t); 
+				line(img, BL, BR, c, t); 
+				line(img, BR, TR, c, t); 
+				line(img, TR, TL, c, t); 
+		}
+	}
 
 	void components_draw(Mat &src, vector<ERStat> &comps)
 	{
