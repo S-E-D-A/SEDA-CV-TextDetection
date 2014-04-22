@@ -9,18 +9,18 @@ namespace recognize_text
 	{	
 
 		// Extract channels to be processed individually
-		vector<Mat> channels_all;
-		computeNMChannels(src, channels_all);
+		vector<Mat> channels;
+		computeNMChannels(src, channels);
 
 		// Use subset of channels to simplify
-		vector<Mat> channels; //TODO: remove
-		channels.push_back(channels_all[0]);
-		channels.push_back(255-channels[0]);
+		//vector<Mat> channels; //TODO: remove
+		//channels.push_back(channels_all[0]);
+		//channels.push_back(255-channels[0]);
 
 		int cn = (int)channels.size();
 		// Append negative channels to detect ER- (bright regions over dark background)
-		//for (int c = 0; c < cn-1; c++)
-			//channels.push_back(255-channels[c]);
+		for (int c = 0; c < cn-1; c++)
+			channels.push_back(255-channels[c]);
 
 		// Create ERFilter objects with the 1st and 2nd stage default classifiers
 		Ptr<ERFilter> er_filter1 = createERFilterNM1(loadClassifierNM1("models/trained_classifierNM1.xml"),16,0.00015f,0.13f,0.2f,true,0.1f);

@@ -584,13 +584,11 @@ void erFormWords(list<ERset>& out, ERset &regions)
 	pruneSubwords(words);
 
 	// Show all ERs
-	int count = 0;
 	for (int d=0; d<(int)words.size(); d++)
 	{
 		list<ERset>::iterator s;
 		for (s=words[d].begin(); s != words[d].end(); s++)
 		{
-			//cout << ++count << endl;
 			//imshow("FINAL",erShow((*s)));
 			//waitKey(300);
 			out.push_back(*s);
